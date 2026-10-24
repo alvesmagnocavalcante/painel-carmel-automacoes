@@ -27,6 +27,34 @@ def document(**changes):
 
 
 class BorderoTests(TestCase):
+    def test_export_preserves_external_text_without_excel_formulas(self):
+        fields = ("supplier", "tax_id", "launch_number", "company", "payment_method",
+                  "history", "situation", "responsible", "pending_reason", "source_situation")
+        values = ('=HYPERLINK("https://example.com","Abrir")', "+123", "-123", "@SUM(A1)", "#N/A")
+        rows = tuple(replace(map_document(document()), **dict.fromkeys(fields, value))
+                     for value in values)
+        with TemporaryDirectory() as directory:
+            path = export_conferences(rows, Path(directory) / "literal-text.xlsx",
+                                      hotel="=1+1", start_date=date(2026, 10, 1),
+                                      end_date=date(2026, 10, 5))
+            workbook = load_workbook(path)
+            try:
+                sheet = workbook.active
+                self.assertEqual(sheet["B2"].value, "=1+1")
+                self.assertEqual(sheet["B2"].data_type, "s")
+                for row_number, value in enumerate(values, 6):
+                    for column in (1, 2, 3, 4, 7, 8, 9, 10, 12, 14):
+                        with self.subTest(value=value, column=column):
+                            cell = sheet.cell(row_number, column)
+                            self.assertEqual(cell.value, value)
+                            self.assertEqual(cell.data_type, "s")
+                    self.assertEqual(sheet.cell(row_number, 5).value, 100.50)
+                    self.assertEqual(sheet.cell(row_number, 5).data_type, "n")
+                    self.assertEqual(sheet.cell(row_number, 11).value.date(), date(2026, 10, 5))
+                    self.assertEqual(sheet.cell(row_number, 11).data_type, "d")
+            finally:
+                workbook.close()
+
     def test_search_accepts_supplier_tax_id_and_launch_and_combines_filters(self):
         first = map_document(document(favorecido="Águas do Nordeste", cpfcnpj="00123456000199", annumero="LAN-123"))
         second = replace(map_document(document(favorecido="José Silva", cpfcnpj="01234567890", annumero="456")), situation="Pendente")

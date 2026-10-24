@@ -157,6 +157,12 @@ def export_conferences(
             ]
         )
 
+    # Database and review text must remain literal, never Excel formulas/errors.
+    for cells in worksheet.iter_rows():
+        for cell in cells:
+            if isinstance(cell.value, str):
+                cell.data_type = "s"
+
     title = worksheet["A1"]
     title.font = Font(size=16, bold=True, color="FFFFFF")
     title.fill = PatternFill("solid", fgColor="183B56")
