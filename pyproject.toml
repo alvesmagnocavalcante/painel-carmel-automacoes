@@ -1,0 +1,22 @@
+[project]
+name = "portal-carmel"
+version = "0.1.0"
+description = "Portal de Automações Financeiras Carmel (Borderô e Inventário)"
+readme = "README.md"
+authors = [
+    { name = "alvesmagnocavalcante", email = "alvesmagnocavalcante@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "flet[all]>=0.28,<0.29",
+    "fastapi>=0.115,<0.128",
+    "openpyxl>=3.1.5,<4",
+    "psycopg[binary,pool]>=3.2,<4",
+    "python-dotenv",
+    "pypdfium2>=4.30,<6",
+    "Pillow>=10,<13",
+    "reportlab>=4.2,<5",
+]
+
+[tool.uv]
+package = false
