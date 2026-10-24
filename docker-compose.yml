@@ -1,0 +1,10 @@
+services:
+  portal-carmel:
+    build: .
+    container_name: portal-carmel
+    restart: unless-stopped
+    ports:
+      - "8550:8550"
+    env_file:
+      - path: .env
+        required: false

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from pathlib import Path
 from secrets import token_urlsafe
@@ -98,8 +99,9 @@ def create_app():
 
 
 def serve() -> None:
-    # Local only: exposing financial data on the network requires authentication/TLS.
-    uvicorn.run(create_app(), host="127.0.0.1", port=8550, access_log=False)
+    host = os.getenv("PORTAL_HOST", os.getenv("HOST", "127.0.0.1"))
+    port = int(os.getenv("PORTAL_PORT", os.getenv("PORT", "8550")))
+    uvicorn.run(create_app(), host=host, port=port, access_log=False)
 
 
 if __name__ == "__main__":
