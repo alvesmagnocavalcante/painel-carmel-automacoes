@@ -6,35 +6,25 @@ from automations.bordero.panel import main as build_bordero
 from automations.inventario.panel import main as build_inventory
 from automations.inventario.financial_panel import main as build_financial_inventory
 from automations.inventario.action_panel import main as build_action_plan
-from portal.theme import DARK, LIGHT, FONT_DISPLAY
+from automations.cartoes_credito.panel import main as build_cards
+from portal.components import module_card, nav_item
+from portal.theme import FONT_DISPLAY, get_palette
 
 
-def main(page, web_download, attachment_download=None):
+def main(page, web_download, attachment_download=None, card_upload_dir=None):
     dark = True
     collapsed = False
     body = ft.Container(expand=True)
     sidebar = ft.Container(width=224, padding=18, animate=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT))
 
     def palette():
-        return DARK if dark else LIGHT
+        return get_palette(dark)
 
     def home():
         colors = palette()
 
         def card(name, title, description, icon, route, button, semantic):
-            return ft.Container(col={"xs": 12, "lg": 6}, padding=28, border_radius=22, bgcolor=colors["surface"],
-                border=ft.border.all(1, colors["border"]), content=ft.Column([
-                    ft.Container(ft.Icon(icon, color=colors[semantic], size=27),
-                                 padding=14, bgcolor=colors[f"{semantic}_soft"], border_radius=16),
-                    ft.Text(name, size=25, weight=ft.FontWeight.W_600, color=colors["text"]),
-                    ft.Text(title, size=15, weight=ft.FontWeight.W_600, color=colors["text"]),
-                    ft.Text(description, size=13, color=colors["muted"]),
-                    ft.Divider(height=18, color=colors["border"]),
-                    ft.ElevatedButton(button, icon=ft.Icons.ARROW_FORWARD,
-                        bgcolor=colors["brand_soft"], color=colors["on_brand"], height=46,
-                        style=ft.ButtonStyle(elevation=0, shape=ft.RoundedRectangleBorder(radius=12)),
-                        on_click=lambda _: page.go(route)),
-                ], spacing=14))
+            return module_card(name, title, description, icon, route, button, semantic, colors, page.go)
 
         return ft.Container(padding=32, content=ft.Column([
             ft.Container(ft.ResponsiveRow([
@@ -63,6 +53,9 @@ def main(page, web_download, attachment_download=None):
                 card("Inventário", "Conferência mensal dos almoxarifados",
                      "Contagens, impacto financeiro e plano de ação dos almoxarifados.",
                      ft.Icons.INVENTORY_2_OUTLINED, "/inventario", "Consultar inventário", "money"),
+                card("Cartões de crédito", "Conferência de faturas e anexos",
+                     "Importe a fatura XLSX, confira os PDFs e registre pendências.",
+                     ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes", "Conferir cartões", "warning"),
             ], spacing=20, run_spacing=20),
         ], spacing=10, scroll=ft.ScrollMode.AUTO))
 
@@ -70,17 +63,7 @@ def main(page, web_download, attachment_download=None):
         colors = palette()
 
         def item(label, icon, route):
-            active = page.route == route or (route == "/inventario" and page.route.startswith("/inventario/"))
-            return ft.Container(
-                ft.Row([ft.Icon(icon, color=colors["accent"] if active else colors["info"], size=20),
-                        ft.Text(label, color=colors["text"], weight=ft.FontWeight.W_600, visible=not collapsed)], spacing=12,
-                       alignment=ft.MainAxisAlignment.CENTER if collapsed else ft.MainAxisAlignment.START),
-                padding=14, border_radius=12,
-                tooltip=label,
-                bgcolor=colors["nav_active"] if active else None,
-                border=ft.border.all(1, colors["border"] if active else ft.Colors.TRANSPARENT),
-                on_click=lambda _: page.go(route),
-            )
+            return nav_item(label, icon, route, page.route, collapsed, colors, page.go)
 
         sidebar.bgcolor = colors["surface"]
         sidebar.width = 76 if collapsed else 224
@@ -113,6 +96,7 @@ def main(page, web_download, attachment_download=None):
             item("Início", ft.Icons.HOME_OUTLINED, "/"),
             item("Borderô", ft.Icons.FACT_CHECK_OUTLINED, "/bordero"),
             item("Inventário", ft.Icons.INVENTORY_2_OUTLINED, "/inventario"),
+            item("Cartões de crédito", ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes"),
             ft.Container(expand=True),
             ft.Text("FINANCEIRO CARMEL", size=10, color=colors["muted"], visible=not collapsed),
             ft.IconButton(
@@ -138,6 +122,7 @@ def main(page, web_download, attachment_download=None):
         inventory.apply_theme(is_dark)
         financial_inventory.apply_theme(is_dark)
         action_plan.apply_theme(is_dark)
+        cards.apply_theme(is_dark)
         navigation()
         if page.route == "/":
             body.content = home()
@@ -152,9 +137,10 @@ def main(page, web_download, attachment_download=None):
     financial_inventory = build_financial_inventory(page, download_file=attachment_download,
         available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
     action_plan = build_action_plan(page, download_file=attachment_download)
+    cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
     panels = {"/bordero": bordero.control, "/inventario": inventory.control,
               "/inventario/financeiro": financial_inventory.control,
-              "/inventario/plano-acao": action_plan.control}
+              "/inventario/plano-acao": action_plan.control, "/cartoes": cards.control}
     page.title = "Carmel • Portal de automações"
 
     def route_changed(_):

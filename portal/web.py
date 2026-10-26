@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from fastapi.responses import Response
 
 from automations.bordero.panel_data import ConferenceRow, export_conferences
+from automations.cartoes_credito.statement import MAX_STATEMENT_BYTES
 from portal.app import main
 
 ASSETS_DIR = Path(__file__).with_name("assets")
@@ -69,7 +70,15 @@ class Downloads:
 
 def create_app():
     downloads = Downloads()
-    app = flet_api.FastAPI(openapi_url=None, docs_url=None, redoc_url=None)
+    uploads = TemporaryDirectory(prefix="cartoes-upload-")
+
+    app = flet_api.FastAPI(
+        openapi_url=None,
+        docs_url=None,
+        redoc_url=None,
+        on_shutdown=[uploads.cleanup],
+    )
+    app.state.card_uploads = uploads
 
     @app.get("/downloads/{token}")
     def download(token: str):
@@ -91,8 +100,12 @@ def create_app():
                 page,
                 web_download=downloads.issue,
                 attachment_download=downloads.issue_file,
+                card_upload_dir=uploads.name,
             ),
             assets_dir=str(ASSETS_DIR),
+            upload_dir=uploads.name,
+            max_upload_size=MAX_STATEMENT_BYTES,
+            secret_key=token_urlsafe(32),
         ),
     )
     return app

@@ -57,6 +57,7 @@ class PortalTests(TestCase):
             self.assertEqual(typography(view), dark_text)
             view.apply_theme(True)
             self.assertEqual(typography(view), dark_text)
+
     def test_inventory_width_follows_window_and_sidebar(self):
         from datetime import date
         from automations.inventario.data import InventoryCount
@@ -81,6 +82,7 @@ class PortalTests(TestCase):
             page.on_resized(None)
             self.assertEqual(table.width, 1634)
             source.return_value.fetch.assert_called_once()
+
     def test_brand_adapts_to_theme_and_collapsed_menu(self):
         page = MagicMock(web=True, route="/")
         roots = []
@@ -127,6 +129,7 @@ class PortalTests(TestCase):
         texts = [item.value for root in roots for item in walk(root) if isinstance(item, ft.Text)]
         self.assertIn("Borderô", texts)
         self.assertIn("Inventário", texts)
+        self.assertIn("Cartões de crédito", texts)
         self.assertIn("Central de automações financeiras", texts)
         self.assertIn("FINANCEIRO • CARMEL HOTÉIS", texts)
         self.assertFalse(any("booking" in str(text).lower() or "recebimentos" in str(text).lower() for text in texts))
@@ -196,6 +199,17 @@ class PortalTests(TestCase):
         with patch("automations.bordero.panel.SqlConferenceProvider"):
             main(page, MagicMock())
         page.go.assert_called_once_with("/")
+
+    def test_cards_route_opens_without_querying_database(self):
+        page = MagicMock(web=True, route="/cartoes")
+        roots = []
+        page.add.side_effect = lambda *items: roots.extend(items)
+        with patch("automations.cartoes_credito.panel.SqlCardPaymentProvider") as source:
+            main(page, MagicMock(), MagicMock())
+            source.return_value.fetch.assert_not_called()
+        body = roots[0].controls[1]
+        self.assertTrue(any(isinstance(item, ft.Text) and item.value == "Conferência de cartões de crédito"
+                            for item in walk(body)))
 
     def test_sidebar_collapses_without_recreating_conference(self):
         page = MagicMock(web=True, route="/bordero")

@@ -8,3 +8,8 @@ services:
     env_file:
       - path: .env
         required: false
+    volumes:
+      - portal-data:/home/appuser/.local/share/Carmel/portal
+
+volumes:
+  portal-data:

@@ -33,7 +33,7 @@ def attachment_view(page, row, download_file=None, colors=None):
         bgcolor=colors.get("surface"), color=colors.get("text"),
         text_style=ft.TextStyle(color=colors.get("text")),
         label_style=ft.TextStyle(color=colors.get("muted")),
-        hover_color=colors.get("soft"), focused_bgcolor=colors.get("soft"),
+        hover_color=colors.get("soft"),
     )
     download = ft.IconButton(ft.Icons.DOWNLOAD, icon_color=colors.get("success"), tooltip="Baixar anexo", disabled=True, visible=download_file is not None)
     viewer = ft.InteractiveViewer(

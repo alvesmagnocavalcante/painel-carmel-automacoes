@@ -13,6 +13,7 @@ import flet as ft
 
 from automations.bordero.attachment_view import attachment_view
 from automations.bordero.database import SqlConferenceProvider
+from automations.bordero.store import BorderoStore
 from automations.bordero.panel_data import (
     ConferenceRow,
     classify_conference,
@@ -70,6 +71,7 @@ def main(
     *,
     embedded: bool = False,
     on_theme_change: Callable[[bool], None] | None = None,
+    store: BorderoStore | None = None,
 ) -> PanelView:
     if not page.web:
         raise RuntimeError(
@@ -89,6 +91,7 @@ def main(
     page.dark_theme = build_theme("#9F9385", DARK)
 
     provider = SqlConferenceProvider()
+    review_store = store if store is not None else BorderoStore()
     current_rows: tuple[ConferenceRow, ...] = ()
     loaded_filters: tuple[date, date, str] | None = None
     today = date.today()
@@ -217,6 +220,7 @@ def main(
                 error_text.value = str(error)
                 page.update()
                 return
+            review_store.save_review(updated)
             current_rows = tuple(updated if row.review_key == item.review_key else row for row in current_rows)
             close()
             refresh_results()
@@ -314,7 +318,7 @@ def main(
             snapshot = (selected_start, selected_end, hotel)
             validate_filters(*snapshot)
             rows = await asyncio.to_thread(provider.fetch, *snapshot)
-            current_rows = rows
+            current_rows = review_store.apply_reviews(rows)
             loaded_filters = snapshot
         except Exception as error:
             logging.getLogger(__name__).exception("Falha na consulta do borderô")

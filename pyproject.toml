@@ -1,7 +1,7 @@
 [project]
 name = "portal-carmel"
 version = "0.1.0"
-description = "Portal de Automações Financeiras Carmel (Borderô e Inventário)"
+description = "Portal de Automações Financeiras Carmel (Borderô, Inventário e Cartões de Crédito)"
 readme = "README.md"
 authors = [
     { name = "alvesmagnocavalcante", email = "alvesmagnocavalcante@gmail.com" }

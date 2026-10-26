@@ -34,6 +34,11 @@ DARK = {
 }
 
 
+def get_palette(is_dark: bool) -> dict[str, str]:
+    """Return the active color palette based on theme mode."""
+    return DARK if is_dark else LIGHT
+
+
 def build_theme(seed: str, colors: dict[str, str]) -> ft.Theme:
     medium = ft.TextStyle(color=colors["text"], weight=ft.FontWeight.W_500)
     bold = ft.TextStyle(color=colors["text"], weight=ft.FontWeight.W_600)
@@ -110,7 +115,6 @@ def style_input(
     control.hint_style = ft.TextStyle(color=colors["muted"])
     if isinstance(control, ft.Dropdown):
         control.hover_color = colors["soft"]
-        control.focused_bgcolor = colors["soft"]
 
 
 def metric_card(
