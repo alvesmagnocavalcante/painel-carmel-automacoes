@@ -7,6 +7,7 @@ from automations.inventario.panel import main as build_inventory
 from automations.inventario.financial_panel import main as build_financial_inventory
 from automations.inventario.action_panel import main as build_action_plan
 from automations.cartoes_credito.panel import main as build_cards
+from automations.cartao_flash.panel import main as build_flash
 from portal.components import module_card, nav_item
 from portal.theme import FONT_DISPLAY, get_palette
 
@@ -56,6 +57,9 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
                 card("Cartões de crédito", "Conferência de faturas e anexos",
                      "Importe a fatura XLSX, confira os PDFs e registre pendências.",
                      ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes", "Conferir cartões", "warning"),
+                card("Cartão Flash", "Conciliação de despesas corporativas",
+                     "Importe o extrato Flash, identifique pendências no ERP e gere cobranças.",
+                     ft.Icons.BOLT_OUTLINED, "/flash", "Conferir Flash", "money"),
             ], spacing=20, run_spacing=20),
         ], spacing=10, scroll=ft.ScrollMode.AUTO))
 
@@ -97,6 +101,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
             item("Borderô", ft.Icons.FACT_CHECK_OUTLINED, "/bordero"),
             item("Inventário", ft.Icons.INVENTORY_2_OUTLINED, "/inventario"),
             item("Cartões de crédito", ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes"),
+            item("Cartão Flash", ft.Icons.BOLT_OUTLINED, "/flash"),
             ft.Container(expand=True),
             ft.Text("FINANCEIRO CARMEL", size=10, color=colors["muted"], visible=not collapsed),
             ft.IconButton(
@@ -123,6 +128,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         financial_inventory.apply_theme(is_dark)
         action_plan.apply_theme(is_dark)
         cards.apply_theme(is_dark)
+        flash_panel.apply_theme(is_dark)
         navigation()
         if page.route == "/":
             body.content = home()
@@ -132,15 +138,22 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
     bordero = build_bordero(page, web_download, attachment_download,
                            embedded=True, on_theme_change=theme_changed)
     inventory = build_inventory(page, download_file=attachment_download,
-                                available_width=lambda: page.width - sidebar.width - 90
-                                if isinstance(page.width, (int, float)) else None)
+                                 available_width=lambda: page.width - sidebar.width - 90
+                                 if isinstance(page.width, (int, float)) else None)
     financial_inventory = build_financial_inventory(page, download_file=attachment_download,
         available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
     action_plan = build_action_plan(page, download_file=attachment_download)
     cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
-    panels = {"/bordero": bordero.control, "/inventario": inventory.control,
-              "/inventario/financeiro": financial_inventory.control,
-              "/inventario/plano-acao": action_plan.control, "/cartoes": cards.control}
+    flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir)
+
+    panels = {
+        "/bordero": bordero.control,
+        "/inventario": inventory.control,
+        "/inventario/financeiro": financial_inventory.control,
+        "/inventario/plano-acao": action_plan.control,
+        "/cartoes": cards.control,
+        "/flash": flash_panel.control,
+    }
     page.title = "Carmel • Portal de automações"
 
     def route_changed(_):

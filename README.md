@@ -7,6 +7,7 @@ Projeto isolado contendo exclusivamente o **Portal Web (Flet + FastAPI)** e seus
   - Impacto financeiro mensal (`/inventario/financeiro`)
   - Plano de ação integrado à API de auditoria com persistência SQLite e exportação Excel e PDF (`/inventario/plano-acao`)
 - **Cartões de crédito (`/cartoes`)**: Conferência de faturas XLSX contra lançamentos CMFlex, persistência SQLite das conciliações e encargos, e exportação de conciliação.
+- **Cartão Flash (`/flash`)**: Conciliação de despesas corporativas Flash contra `cmflex.historico_cartao_flash`, identificação automática de `PENDENTE DE LANÇAMENTO`, `PENDENTE DE PRESTAÇÃO` e `PRESTADO CONTAS`, visualização de comprovantes fiscais em PDF e geração de planilha Excel e texto de cobrança para e-mail.
 
 ## Instalação
 
@@ -23,8 +24,9 @@ python -m venv .venv
 Copie o arquivo `.env.example` para `.env` na raiz do projeto e configure as variáveis necessárias:
 - **PostgreSQL (CMFlex)**: Apenas leitura (`DB_HOST`, `DB_PORT`, `DB_USER`, etc.).
 - **Persistência SQLite**: As conferências e classificações humanas são mantidas em bancos SQLite locais com WAL mode para garantir que o que já foi conferido permaneça salvo:
-  - `BORDERO_ACTION_DB`: Caminho para `bordero.sqlite3` (padrão: `%LOCALAPPDATA%/Carmel/portal/bordero.sqlite3` no Windows ou `~/.local/share/Carmel/portal/bordero.sqlite3` no Linux).
-  - `CARTOES_ACTION_DB`: Caminho para `cartoes.sqlite3` (padrão no mesmo diretório).
+  - `BORDERO_ACTION_DB`: Caminho para `bordero.sqlite3`.
+  - `CARTOES_ACTION_DB`: Caminho para `cartoes.sqlite3`.
+  - `FLASH_ACTION_DB`: Caminho para `flash.sqlite3`.
   - `INVENTARIO_ACTION_DB`: Caminho para `plano-acao.sqlite3`.
 
 ## Execução
