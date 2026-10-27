@@ -119,6 +119,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         navigation()
         inventory.resize()
         financial_inventory.resize()
+        flash_panel.resize()
         page.update()
 
     def theme_changed(is_dark):
@@ -144,7 +145,9 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
     action_plan = build_action_plan(page, download_file=attachment_download)
     cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
-    flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir)
+    flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir,
+                              available_width=lambda: page.width - sidebar.width - 90
+                              if isinstance(page.width, (int, float)) else None)
 
     panels = {
         "/bordero": bordero.control,
@@ -173,7 +176,8 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
             return
         inventory_changed = inventory.resize()
         financial_changed = financial_inventory.resize()
-        if inventory_changed or financial_changed:
+        flash_changed = flash_panel.resize() if hasattr(flash_panel, "resize") else False
+        if inventory_changed or financial_changed or flash_changed:
             page.update()
 
     page.on_resized = resized

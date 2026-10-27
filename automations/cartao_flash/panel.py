@@ -41,6 +41,7 @@ MAX_STATEMENT_BYTES = 5 * 1024 * 1024
 class FlashPanelView:
     control: ft.Column
     apply_theme: Callable[[bool], None]
+    resize: Callable[[], bool] = lambda: False
 
 
 def _money(value: Decimal) -> str:
@@ -54,6 +55,7 @@ def main(
     provider: SqlFlashProvider | None = None,
     upload_dir: str | None = None,
     store: FlashStore | None = None,
+    available_width: Callable[[], float | None] | None = None,
 ) -> FlashPanelView:
     flash_provider = provider if provider is not None else SqlFlashProvider()
     flash_store = store if store is not None else FlashStore()
@@ -639,6 +641,19 @@ def main(
                     )
                 )
 
+            def compute_target_width() -> int:
+                if available_width is not None:
+                    aw = available_width()
+                    if isinstance(aw, (int, float)) and aw > 600:
+                        return int(aw)
+                if isinstance(page.width, (int, float)) and page.width > 600:
+                    return int(page.width - 150)
+                return 1200
+
+            target_width = max(1150, compute_target_width())
+            extra_width = max(0, target_width - 1100)
+            dynamic_spacing = 22 + (extra_width // 8)
+
             data_table = ft.DataTable(
                 columns=[
                     ft.DataColumn(ft.Text("Data", size=12, weight=ft.FontWeight.W_600, color=c["muted"])),
@@ -652,17 +667,24 @@ def main(
                     ft.DataColumn(ft.Text("Editar", size=12, weight=ft.FontWeight.W_600, color=c["muted"])),
                 ],
                 rows=table_rows,
+                width=target_width,
                 heading_row_color=c["soft"],
-                horizontal_margin=16,
-                column_spacing=18,
+                horizontal_margin=24,
+                column_spacing=dynamic_spacing,
                 heading_row_height=56,
                 data_row_min_height=58,
                 data_row_max_height=68,
             )
 
-            viewport_height = min(430, 56 + max(1, len(table_rows)) * 64)
+            if isinstance(page.height, (int, float)) and page.height > 600:
+                max_viewport = max(550, min(860, int(page.height) - 340))
+            else:
+                max_viewport = 640
+
+            viewport_height = min(max_viewport, 56 + max(1, len(table_rows)) * 64 + 20)
             table_body = ft.Column(
                 [data_table],
+                width=target_width,
                 height=viewport_height,
                 scroll=ft.ScrollMode.ALWAYS,
             )
@@ -706,10 +728,16 @@ def main(
         if page:
             page.update()
 
+    def resize() -> bool:
+        if statement is not None:
+            render()
+            return True
+        return False
+
     def apply_theme(is_dark: bool):
         nonlocal dark
         dark = is_dark
         render()
 
     render()
-    return FlashPanelView(control=layout, apply_theme=apply_theme)
+    return FlashPanelView(control=layout, apply_theme=apply_theme, resize=resize)
