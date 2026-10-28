@@ -380,8 +380,9 @@ def main(
         metric("Saldo total", balance_value, ft.Icons.PAYMENTS_OUTLINED, semantic="money"),
     ], spacing=14, run_spacing=14)
 
-    header_title = ft.Text("Conferência de pagamentos", size=24, weight=ft.FontWeight.W_600, color=palette()["text"])
-    header_subtitle = ft.Text("Pagamentos em aberto • Baixe o Excel antes de fechar ou consultar novamente.", color=palette()["muted"])
+    header_category = ft.Text("BORDERÔ • CONFERÊNCIA DE PAGAMENTOS", size=11, weight=ft.FontWeight.W_600, color=palette()["accent"])
+    header_title = ft.Text("Conferência de pagamentos em aberto", size=24, weight=ft.FontWeight.W_600, color=palette()["text"])
+    header_subtitle = ft.Text("Consulte o período, confira os anexos e classifique os pagamentos do CMFlex.", size=13, color=palette()["muted"])
     theme_button = ft.IconButton(icon=ft.Icons.LIGHT_MODE_OUTLINED, icon_color=palette()["warning"], tooltip="Usar modo claro")
     header = ft.Container(
         content=ft.Row([
@@ -390,7 +391,7 @@ def main(
                     ft.Image(src="/carmel-logo.png", width=164, height=70, fit=ft.ImageFit.CONTAIN, semantics_label="Carmel Hotéis"),
                     bgcolor="#FFFFFF", border_radius=10, padding=8, visible=not embedded,
                 ),
-                ft.Column([header_title, header_subtitle], spacing=6, expand=True),
+                ft.Column([header_category, header_title, header_subtitle], spacing=4, expand=True),
             ], spacing=24, expand=True),
             theme_button,
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -436,6 +437,7 @@ def main(
         page.theme_mode = ft.ThemeMode.DARK if dark_mode else ft.ThemeMode.LIGHT
         page.bgcolor, header.bgcolor = colors["background"], colors["surface"]
         header.border = ft.border.only(bottom=ft.BorderSide(1, colors["border"]))
+        header_category.color = colors["accent"]
         for surface in surfaces:
             surface.bgcolor, surface.border = colors["surface"], ft.border.all(1, colors["border"])
         for control in primary_texts:

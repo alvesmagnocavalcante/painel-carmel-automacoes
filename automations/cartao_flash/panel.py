@@ -271,6 +271,8 @@ def main(
                     f"{item.transaction.description} {item.transaction.person} "
                     f"{item.effective_hotel} {item.transaction.amount} "
                     f"{item.matched_document.launch_number if item.matched_document else ''} "
+                    f"{item.matched_document.batch_id if item.matched_document else ''} "
+                    f"{item.matched_document.display_batch if item.matched_document else ''} "
                     f"{item.matched_document.supplier if item.matched_document else ''}"
                 )
                 if q not in match_text:
@@ -506,7 +508,7 @@ def main(
             person_dropdown.on_change = change_person
 
             search_field = ft.TextField(
-                label="Buscar estabelecimento, valor ou documento",
+                label="Buscar estabelecimento, valor, documento ou lote",
                 value=search_query,
                 prefix_icon=ft.Icons.SEARCH,
             )
@@ -555,44 +557,10 @@ def main(
 
                 if item.status == STATUS_PENDING_LAUNCH:
                     status_color = "#EF4444"
-                    status_bg = "#FEE2E2" if not dark else "#451A1A"
                 elif item.status == STATUS_PENDING_SETTLEMENT:
                     status_color = "#D97706"
-                    status_bg = "#FEF3C7" if not dark else "#452C08"
                 else:
                     status_color = "#10B981"
-                    status_bg = "#D1FAE5" if not dark else "#0B3827"
-
-                status_badge = ft.Container(
-                    content=ft.Text(item.status, size=11, weight=ft.FontWeight.W_600, color=status_color),
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                    border_radius=6,
-                    bgcolor=status_bg,
-                )
-
-                if doc:
-                    cmflex_desc = ft.Column([
-                        ft.Text(f"Lançamento #{doc.launch_number}", size=12, weight=ft.FontWeight.W_600, color=c["text"]),
-                        ft.Text(f"{doc.supplier} • {doc.company}", size=11, color=c["muted"], max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                    ], spacing=2)
-                else:
-                    cmflex_desc = ft.Text("Não lançado no ERP", size=12, italic=True, color="#EF4444")
-
-                actions_row = ft.Row([
-                    ft.IconButton(
-                        ft.Icons.ATTACH_FILE,
-                        tooltip=f"Ver anexo ({doc.attachment_count})" if doc and doc.attachment_count else "Sem anexo",
-                        disabled=not (doc and doc.attachment_count > 0),
-                        icon_color=c["info"],
-                        on_click=lambda _, d=doc: flash_attachment_dialog(page, d, flash_provider, c, download_file),
-                    ),
-                    ft.IconButton(
-                        ft.Icons.EDIT_NOTE,
-                        tooltip="Editar anotação",
-                        icon_color=c["accent"],
-                        on_click=lambda _, it=item: open_edit_dialog(it),
-                    ),
-                ], spacing=2)
 
                 table_rows.append(
                     ft.DataRow(
@@ -618,11 +586,12 @@ def main(
                                 no_wrap=True,
                             )),
                             ft.DataCell(ft.Text(
-                                f"#{doc.launch_number} | {doc.supplier} | {doc.company}"
+                                f"#{doc.launch_number} ({doc.display_batch}) | {doc.supplier} | {doc.company}"
                                 if doc else "Não lançado no ERP",
                                 size=12,
                                 color=c["text"] if doc else "#EF4444",
                                 no_wrap=True,
+                                tooltip=f"Situação no CMFlex: {doc.cmflex_situation}" if doc and doc.cmflex_situation else None,
                             )),
                             ft.DataCell(ft.IconButton(
                                 ft.Icons.ATTACH_FILE,

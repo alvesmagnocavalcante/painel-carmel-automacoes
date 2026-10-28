@@ -58,6 +58,45 @@ class FlashDataTests(TestCase):
         dt = parse_flash_date("21/10/2026 09:22")
         self.assertEqual(dt, date(2026, 10, 21))
 
+    def test_display_batch_property(self):
+        doc_with_batch = CmflexFlashDocument(
+            document_id=1,
+            company_id=1,
+            company="CARMEL",
+            launch_number="100",
+            supplier="POSTO",
+            tax_id="",
+            launch_date=date(2026, 10, 20),
+            due_date=None,
+            scheduled_date=None,
+            amount=Decimal("50.00"),
+            balance=Decimal("0.00"),
+            document_status=2,
+            payment_method="",
+            holder="",
+            batch_id="45210",
+        )
+        self.assertEqual(doc_with_batch.display_batch, "Lote #45210")
+
+        doc_without_batch = CmflexFlashDocument(
+            document_id=2,
+            company_id=1,
+            company="CARMEL",
+            launch_number="101",
+            supplier="POSTO",
+            tax_id="",
+            launch_date=date(2026, 10, 20),
+            due_date=None,
+            scheduled_date=None,
+            amount=Decimal("50.00"),
+            balance=Decimal("0.00"),
+            document_status=2,
+            payment_method="",
+            holder="",
+            batch_id="",
+        )
+        self.assertEqual(doc_without_batch.display_batch, "Sem Lote")
+
     def test_parse_csv_statement(self):
         statement = parse_flash_csv(SAMPLE_CSV)
         self.assertEqual(len(statement.transactions), 6)
@@ -315,13 +354,39 @@ class FlashExportTests(TestCase):
             hotel="MAGNA PRAIA",
         )
         item = FlashReconciliationItem(transaction=tx, status=STATUS_PENDING_LAUNCH, hotel="MAGNA PRAIA")
-        data = export_flash_reconciliation((item,))
+        doc = CmflexFlashDocument(
+            document_id=1,
+            company_id=1,
+            company="CARMEL",
+            launch_number="100",
+            supplier="MAXLIMP",
+            tax_id="",
+            launch_date=date(2026, 8, 31),
+            due_date=None,
+            scheduled_date=None,
+            amount=Decimal("100.00"),
+            balance=Decimal("0.00"),
+            document_status=2,
+            payment_method="",
+            holder="",
+            batch_id="9988",
+        )
+        item_matched = FlashReconciliationItem(
+            transaction=tx,
+            status=STATUS_SETTLED,
+            hotel="MAGNA PRAIA",
+            matched_document=doc,
+        )
+        data = export_flash_reconciliation((item, item_matched))
         self.assertIsInstance(data, bytes)
         wb = load_workbook(BytesIO(data))
         ws = wb.active
+        self.assertEqual(ws.cell(row=1, column=9).value, "LOTE CMFLEX")
         self.assertEqual(ws.cell(row=2, column=1).value, "AGOSTO")
         self.assertEqual(ws.cell(row=2, column=3).value, "MAXLIMP FORTALEZA")
         self.assertEqual(ws.cell(row=2, column=6).value, STATUS_PENDING_LAUNCH)
+        self.assertFalse(ws.cell(row=2, column=9).value)
+        self.assertEqual(ws.cell(row=3, column=9).value, "Lote #9988")
 
     def test_email_text_generation(self):
         tx = FlashTransaction(

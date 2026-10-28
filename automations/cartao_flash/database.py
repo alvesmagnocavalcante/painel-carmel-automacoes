@@ -66,6 +66,12 @@ class SqlFlashProvider:
                p.dtdataprogramada::date AS dtprogramada,
                p.vlvalormoedacorrente AS valor, p.saldo, p.statusdocumento,
                p.formadepagamento, p.portador_documento, p.anhistorico,
+               p.idlote,
+               CASE 
+                   WHEN p.statusdocumento = 2 OR p.saldo = 0 THEN 'PRESTADO CONTAS'
+                   WHEN p.idlote IS NOT NULL THEN 'EM LOTE / AGUARDANDO BAIXA'
+                   ELSE 'PENDENTE DE PRESTAÇÃO'
+               END AS situacao_cmflex,
                count(d.id) AS contagem_anexos
         FROM cmflex.historico_cartao_flash p
         LEFT JOIN cmflex.documentos_anexos d ON p.iddocumentocapcarbase = d.iddocumentocapcarbase
@@ -75,7 +81,7 @@ class SqlFlashProvider:
                  p.favorecido, p.cpfcnpj, p.dtdatadelancamento,
                  p.dtdatadevencimento, p.dtdataprogramada,
                  p.vlvalormoedacorrente, p.saldo, p.statusdocumento,
-                 p.formadepagamento, p.portador_documento, p.anhistorico
+                 p.formadepagamento, p.portador_documento, p.anhistorico, p.idlote
         ORDER BY p.dtdatadelancamento DESC, p.annumero
         """
 
@@ -109,6 +115,8 @@ class SqlFlashProvider:
                 holder=str(r.get("portador_documento") or "").strip(),
                 history=str(r.get("anhistorico") or "").strip(),
                 attachment_count=int(r.get("contagem_anexos") or 0),
+                batch_id=str(r.get("idlote") or "").strip(),
+                cmflex_situation=str(r.get("situacao_cmflex") or "").strip(),
             )
             documents.append(doc)
 

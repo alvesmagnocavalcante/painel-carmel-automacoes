@@ -8,6 +8,7 @@ from automations.inventario.financial_panel import main as build_financial_inven
 from automations.inventario.action_panel import main as build_action_plan
 from automations.cartoes_credito.panel import main as build_cards
 from automations.cartao_flash.panel import main as build_flash
+from automations.dda.panel import main as build_dda
 from portal.components import module_card, nav_item
 from portal.theme import FONT_DISPLAY, get_palette
 
@@ -60,6 +61,9 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
                 card("Cartão Flash", "Conciliação de despesas corporativas",
                      "Importe o extrato Flash, identifique pendências no ERP e gere cobranças.",
                      ft.Icons.BOLT_OUTLINED, "/flash", "Conferir Flash", "money"),
+                card("DDA", "Conferência da planilha do DDA",
+                     "Importe o DDA do Itaú, concilie com o CMFlex e gere cobranças de boletos.",
+                     ft.Icons.RECEIPT_LONG_OUTLINED, "/dda", "Conferir DDA", "info"),
             ], spacing=20, run_spacing=20),
         ], spacing=10, scroll=ft.ScrollMode.AUTO))
 
@@ -102,6 +106,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
             item("Inventário", ft.Icons.INVENTORY_2_OUTLINED, "/inventario"),
             item("Cartões de crédito", ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes"),
             item("Cartão Flash", ft.Icons.BOLT_OUTLINED, "/flash"),
+            item("DDA", ft.Icons.RECEIPT_LONG_OUTLINED, "/dda"),
             ft.Container(expand=True),
             ft.Text("FINANCEIRO CARMEL", size=10, color=colors["muted"], visible=not collapsed),
             ft.IconButton(
@@ -120,6 +125,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         inventory.resize()
         financial_inventory.resize()
         flash_panel.resize()
+        dda_panel.resize()
         page.update()
 
     def theme_changed(is_dark):
@@ -130,6 +136,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         action_plan.apply_theme(is_dark)
         cards.apply_theme(is_dark)
         flash_panel.apply_theme(is_dark)
+        dda_panel.apply_theme(is_dark)
         navigation()
         if page.route == "/":
             body.content = home()
@@ -148,6 +155,9 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
     flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir,
                               available_width=lambda: page.width - sidebar.width - 90
                               if isinstance(page.width, (int, float)) else None)
+    dda_panel = build_dda(page, download_file=attachment_download, upload_dir=card_upload_dir,
+                          available_width=lambda: page.width - sidebar.width - 90
+                          if isinstance(page.width, (int, float)) else None)
 
     panels = {
         "/bordero": bordero.control,
@@ -156,6 +166,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         "/inventario/plano-acao": action_plan.control,
         "/cartoes": cards.control,
         "/flash": flash_panel.control,
+        "/dda": dda_panel.control,
     }
     page.title = "Carmel • Portal de automações"
 
@@ -177,7 +188,8 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         inventory_changed = inventory.resize()
         financial_changed = financial_inventory.resize()
         flash_changed = flash_panel.resize() if hasattr(flash_panel, "resize") else False
-        if inventory_changed or financial_changed or flash_changed:
+        dda_changed = dda_panel.resize() if hasattr(dda_panel, "resize") else False
+        if inventory_changed or financial_changed or flash_changed or dda_changed:
             page.update()
 
     page.on_resized = resized

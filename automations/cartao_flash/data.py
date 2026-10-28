@@ -171,11 +171,18 @@ class CmflexFlashDocument:
     holder: str
     history: str = ""
     attachment_count: int = 0
+    batch_id: str = ""
+    cmflex_situation: str = ""
 
     @property
     def is_settled(self) -> bool:
         """Document is settled if balance is zero or status is 2 (baixado)."""
         return self.balance == Decimal("0.0") or self.document_status == 2
+
+    @property
+    def display_batch(self) -> str:
+        """Friendly batch display name."""
+        return f"Lote #{self.batch_id}" if self.batch_id and str(self.batch_id).strip() else "Sem Lote"
 
 
 @dataclass(frozen=True)

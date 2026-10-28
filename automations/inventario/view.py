@@ -41,13 +41,24 @@ def inventory_navigation(page, colors, *, financial=False, action_plan=False):
                         padding=ft.padding.only(top=10))
 
 
-def inventory_header(page, colors, title: str, subtitle: str, *, financial=False, action_plan=False) -> ft.Container:
+def inventory_header(
+    page,
+    colors,
+    title: str,
+    subtitle: str,
+    category: str = "INVENTÁRIO • ALMOXARIFADO",
+    *,
+    financial: bool = False,
+    action_plan: bool = False,
+) -> ft.Container:
     return ft.Container(
         ft.Column([
-            panel_text(title, colors, bold=True, size=24),
-            panel_text(subtitle, colors, muted=True),
+            ft.Text(category, size=11, weight=ft.FontWeight.W_600, color=colors["accent"]),
+            ft.Text(title, size=24, weight=ft.FontWeight.W_600, color=colors["text"]),
+            ft.Text(subtitle, size=13, color=colors["muted"]),
             inventory_navigation(page, colors, financial=financial, action_plan=action_plan),
-        ], spacing=6, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+        ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         padding=ft.padding.symmetric(horizontal=32, vertical=20),
         bgcolor=colors["surface"],
+        border=ft.border.only(bottom=ft.BorderSide(1, colors["border"])),
     )

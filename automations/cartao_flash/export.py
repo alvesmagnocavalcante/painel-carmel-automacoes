@@ -44,6 +44,7 @@ def export_flash_reconciliation(items: Sequence[FlashReconciliationItem]) -> byt
         "OBSERVAÇÃO",
         "HOTEL",
         "DOC CMFLEX",
+        "LOTE CMFLEX",
     ]
     ws.append(headers)
 
@@ -64,6 +65,7 @@ def export_flash_reconciliation(items: Sequence[FlashReconciliationItem]) -> byt
         date_str = tx.purchase_date.strftime("%d/%m/%Y")
         amount_val = -float(tx.amount)  # Displayed as negative in the team's spreadsheet
         cmflex_info = f"Doc #{item.matched_document.launch_number}" if item.matched_document else ""
+        batch_info = item.matched_document.display_batch if item.matched_document else ""
 
         ws.append([
             tx.month_name,
@@ -74,6 +76,7 @@ def export_flash_reconciliation(items: Sequence[FlashReconciliationItem]) -> byt
             item.effective_notes,
             item.effective_hotel,
             cmflex_info,
+            batch_info,
         ])
 
         # Style cells

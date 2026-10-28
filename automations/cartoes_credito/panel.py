@@ -110,9 +110,18 @@ def main(page: ft.Page, download_file=None, *, provider=None, upload_dir: str | 
         search_options.bgcolor = search_options.collapsed_bgcolor = palette["surface"]
         search_options.text_color = search_options.collapsed_text_color = palette["text"]
         search_options.icon_color = search_options.collapsed_icon_color = palette["muted"]
+        header = ft.Container(
+            padding=ft.padding.symmetric(horizontal=32, vertical=20),
+            border=ft.border.only(bottom=ft.BorderSide(1, palette["border"])),
+            bgcolor=palette["surface"],
+            content=ft.Column([
+                ft.Text("CARTÕES DE CRÉDITO • CONFERÊNCIA DE FATURAS", size=11, weight=ft.FontWeight.W_600, color=palette["accent"]),
+                ft.Text("Conferência de cartões de crédito", size=24, weight=ft.FontWeight.W_600, color=palette["text"]),
+                ft.Text("Importe a fatura XLSX, confira os lançamentos no CMFlex e registre pendências.", size=13, color=palette["muted"]),
+            ], spacing=4),
+        )
         layout.controls = [
-            ft.Container(label("Conferência de cartões de crédito", bold=True, size=24),
-                         padding=ft.padding.symmetric(horizontal=32, vertical=20), bgcolor=palette["surface"]),
+            header,
             ft.Container(ft.Column([search_options, bank.control], spacing=14,
                                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
                          padding=24, expand=True),

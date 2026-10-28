@@ -177,8 +177,14 @@ def main(page, download_file=None, *, provider=None, store=None):
         results = table(items) if items else ft.Container(text("Nenhum plano de ação na seleção.", muted=True),
                                                           height=TABLE_HEIGHT, alignment=ft.alignment.center)
         layout.controls = [
-            inventory_header(page, colors, "Plano de ação do inventário",
-                             "Pontos de melhoria da API com acompanhamento e preenchimento manual.", action_plan=True),
+            inventory_header(
+                page,
+                colors,
+                "Plano de ação do inventário",
+                "Pontos de melhoria da API com acompanhamento e preenchimento manual.",
+                category="INVENTÁRIO • PLANO DE AÇÃO",
+                action_plan=True,
+            ),
             ft.Container(ft.Column([
                 ft.ResponsiveRow(metrics, spacing=12, run_spacing=12),
                 surface(ft.Column([

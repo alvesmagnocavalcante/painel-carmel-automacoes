@@ -141,8 +141,14 @@ def main(page, download_file=None, *, provider=None, available_width=None):
         results = table(items) if items else ft.Container(text("Nenhum resultado para a seleção.", muted=True),
             height=TABLE_HEIGHT, alignment=ft.alignment.center)
         layout.controls = [
-            inventory_header(page, palette, "Impacto financeiro do inventário",
-                             "Perdas e sobras por empresa e almoxarifado, com dados do CMFlex.", financial=True),
+            inventory_header(
+                page,
+                palette,
+                "Impacto financeiro do inventário",
+                "Perdas e sobras por empresa e almoxarifado, com dados do CMFlex.",
+                category="INVENTÁRIO • IMPACTO FINANCEIRO",
+                financial=True,
+            ),
             ft.Container(ft.Column([
                 surface(ft.Column([
                     ft.ResponsiveRow([company, month, ft.Container(consult, col={"xs": 12, "md": 4})], spacing=14, run_spacing=14),

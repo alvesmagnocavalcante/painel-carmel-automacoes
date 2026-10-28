@@ -133,7 +133,13 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
         period = (f"Todos os meses disponíveis • {month_label(snapshot[0])} a {month_label(snapshot[1])}"
                   if snapshot and snapshot_all else f"{snapshot[0]:%d/%m/%Y} a {snapshot[1]:%d/%m/%Y}" if snapshot else "Nenhuma consulta realizada")
         layout.controls = [
-            inventory_header(page, colors, "Conferência de inventário", "Resumo mensal por empresa e almoxarifado."),
+            inventory_header(
+                page,
+                colors,
+                "Conferência de inventário físico",
+                "Resumo mensal de contagens por empresa e almoxarifado.",
+                category="INVENTÁRIO • CONFERÊNCIA MENSAL",
+            ),
             ft.Container(ft.Column([
                 surface(ft.Column([
                     text("Filtros da consulta", bold=True, size=18),
