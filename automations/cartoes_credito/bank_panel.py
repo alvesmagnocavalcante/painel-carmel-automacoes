@@ -360,9 +360,9 @@ def main(page: ft.Page, *, colors: Callable[[], dict], payments: Callable[[], tu
                         column(cells[0], 5), column(cells[1], 2),
                         column(cells[2], 2, alignment=ft.alignment.center_right),
                         column(cells[3], 2), ft.Container(content=cells[4], width=112),
-                    ], spacing=16, wrap=False, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    ], spacing=12, wrap=False, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     bgcolor=palette["table"] if header else None,
-                    padding=ft.padding.symmetric(horizontal=18, vertical=12),
+                    padding=ft.padding.symmetric(horizontal=14, vertical=10),
                     border=None if header else ft.border.only(bottom=ft.BorderSide(1, palette["border"])),
                 )
 
@@ -393,8 +393,8 @@ def main(page: ft.Page, *, colors: Callable[[], dict], payments: Callable[[], tu
         container.bgcolor = palette["surface"]
         container.border = ft.border.all(1, palette["border"])
         container.border_radius = 16
-        container.padding = 20
-        container.content = ft.Column(contents, spacing=14,
+        container.padding = 16
+        container.content = ft.Column(contents, spacing=10,
                                       horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
     render()
     return BankPanelView(container, render, lambda: statement)

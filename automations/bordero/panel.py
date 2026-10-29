@@ -119,10 +119,10 @@ def main(
     )
     table_container = ft.Container(content=empty_state)
 
-    total_value = ft.Text("0", size=25, weight=ft.FontWeight.BOLD, color=palette()["text"])
-    checked_value = ft.Text("0", size=25, weight=ft.FontWeight.BOLD, color=palette()["success"])
-    pending_value = ft.Text("0", size=25, weight=ft.FontWeight.BOLD, color=palette()["warning"])
-    balance_value = ft.Text("R$ 0,00", size=25, weight=ft.FontWeight.BOLD, color=palette()["text"])
+    total_value = ft.Text("0", size=21, weight=ft.FontWeight.BOLD, color=palette()["text"])
+    checked_value = ft.Text("0", size=21, weight=ft.FontWeight.BOLD, color=palette()["success"])
+    pending_value = ft.Text("0", size=21, weight=ft.FontWeight.BOLD, color=palette()["warning"])
+    balance_value = ft.Text("R$ 0,00", size=21, weight=ft.FontWeight.BOLD, color=palette()["text"])
     download_button = ft.OutlinedButton("Baixar Excel", icon=ft.Icons.DOWNLOAD_OUTLINED, icon_color=palette()["success"], disabled=True)
 
     def show_message(message: str, error: bool = False) -> None:
@@ -271,28 +271,39 @@ def main(
         page.open(dialog)
         page.run_task(load_preview)
 
-    def table_cell(text: str, *, color: str | None = None, bold: bool = False) -> ft.DataCell:
-        return ft.DataCell(ft.Text(text, color=color or palette()["text"], weight=ft.FontWeight.W_600 if bold else ft.FontWeight.W_500, no_wrap=True))
+    def table_cell(text: str, *, color: str | None = None, bold: bool = False,
+                   width: int | None = None, lines: int = 2) -> ft.DataCell:
+        content = ft.Text(
+            text,
+            width=width,
+            color=color or palette()["text"],
+            weight=ft.FontWeight.W_600 if bold else ft.FontWeight.W_500,
+            max_lines=lines if width else 1,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            tooltip=text,
+        )
+        return ft.DataCell(content)
 
     def build_table(rows: tuple[ConferenceRow, ...]) -> ft.Control:
         colors = palette()
         data_rows = [
             ft.DataRow(cells=[
-                table_cell(item.supplier),
-                table_cell(item.tax_id),
+                table_cell(item.supplier, width=210),
+                table_cell(item.tax_id, width=125),
                 table_cell(item.launch_number, bold=True),
-                table_cell(item.company),
+                table_cell(item.company, width=145),
                 table_cell(_currency(item.balance)),
                 table_cell(_date_text(item.scheduled_date)),
                 table_cell(_date_text(item.due_date)),
-                table_cell(item.payment_method or "Não informado"),
+                table_cell(item.payment_method or "Não informado", width=155),
                 table_cell(item.situation, color=colors["success"] if item.situation == "Conferido" else colors["warning"], bold=True),
-                table_cell(item.responsible or "Não informado"),
-                table_cell(item.attachment_summary, color=colors["warning"] if item.attachment_count == 0 else colors["text"]),
-                table_cell(item.source_situation or "Não informada"),
-                table_cell(item.pending_reason),
+                table_cell(item.responsible or "Não informado", width=165),
+                table_cell(item.attachment_summary, width=105,
+                           color=colors["warning"] if item.attachment_count == 0 else colors["text"]),
+                table_cell(item.source_situation or "Não informada", width=145),
+                table_cell(item.pending_reason or "—", width=180, lines=3),
                 ft.DataCell(ft.IconButton(icon=ft.Icons.EDIT_OUTLINED, icon_color=colors["info"], tooltip="Conferir lançamento", on_click=lambda _, row=item: review(row))),
-                table_cell(item.history),
+                table_cell(item.history or "—", width=220, lines=3),
             ])
             for item in rows
         ]
@@ -300,8 +311,8 @@ def main(
         table = ft.DataTable(
             heading_text_style=ft.TextStyle(color=colors["text"], weight=ft.FontWeight.W_600),
             columns=[ft.DataColumn(ft.Text(label), numeric=numeric) for label, numeric in TABLE_COLUMNS],
-            rows=data_rows, heading_row_color=colors["table"], column_spacing=28,
-            data_row_min_height=52, data_row_max_height=60,
+            rows=data_rows, heading_row_color=colors["table"], column_spacing=14,
+            heading_row_height=46, data_row_min_height=56, data_row_max_height=80,
         )
         return ft.Row(
             [ft.Column([table], height=viewport_height, scroll=ft.ScrollMode.ALWAYS)],
@@ -360,12 +371,12 @@ def main(
 
     def metric(label: str, value: ft.Text, icon: str, *, semantic: str) -> ft.Container:
         colors = palette()
-        label_control = ft.Text(label, color=colors["muted"], size=13)
-        icon_control = ft.Icon(icon, color=colors[semantic], size=20)
-        icon_bg = ft.Container(icon_control, bgcolor=colors[f"{semantic}_soft"], border_radius=12, padding=10)
+        label_control = ft.Text(label, color=colors["muted"], size=11)
+        icon_control = ft.Icon(icon, color=colors[semantic], size=18)
+        icon_bg = ft.Container(icon_control, bgcolor=colors[f"{semantic}_soft"], border_radius=10, padding=8)
         card = surface_card(
-            ft.Row([icon_bg, ft.Column([label_control, value], spacing=2, tight=True)], spacing=12),
-            colors, radius=14, padding=14, height=84, col={"xs": 12, "sm": 6, "lg": 3},
+            ft.Row([icon_bg, ft.Column([label_control, value], spacing=1, tight=True)], spacing=10),
+            colors, radius=12, padding=12, height=70, col={"xs": 12, "sm": 6, "lg": 3},
         )
         metric_cards.append(card)
         metric_labels.append(label_control)
@@ -378,12 +389,13 @@ def main(
         metric("Conferidos", checked_value, ft.Icons.CHECK_CIRCLE_OUTLINE, semantic="success"),
         metric("Pendências", pending_value, ft.Icons.WARNING_AMBER_ROUNDED, semantic="warning"),
         metric("Saldo total", balance_value, ft.Icons.PAYMENTS_OUTLINED, semantic="money"),
-    ], spacing=14, run_spacing=14)
+    ], spacing=10, run_spacing=10)
 
     header_category = ft.Text("BORDERÔ • CONFERÊNCIA DE PAGAMENTOS", size=11, weight=ft.FontWeight.W_600, color=palette()["accent"])
     header_title = ft.Text("Conferência de pagamentos em aberto", size=24, weight=ft.FontWeight.W_600, color=palette()["text"])
     header_subtitle = ft.Text("Consulte o período, confira os anexos e classifique os pagamentos do CMFlex.", size=13, color=palette()["muted"])
-    theme_button = ft.IconButton(icon=ft.Icons.LIGHT_MODE_OUTLINED, icon_color=palette()["warning"], tooltip="Usar modo claro")
+    theme_button = ft.IconButton(icon=ft.Icons.LIGHT_MODE_OUTLINED, icon_color=palette()["warning"],
+                                 tooltip="Usar modo claro", visible=not embedded)
     header = ft.Container(
         content=ft.Row([
             ft.Row([
@@ -395,7 +407,7 @@ def main(
             ], spacing=24, expand=True),
             theme_button,
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-        bgcolor=palette()["surface"], padding=ft.padding.symmetric(horizontal=32, vertical=20),
+        bgcolor=palette()["surface"], padding=ft.padding.symmetric(horizontal=24, vertical=16),
         border=ft.border.only(bottom=ft.BorderSide(1, palette()["border"])),
     )
 
@@ -410,8 +422,8 @@ def main(
                 ft.Container(consult_button, col={"sm": 12, "md": 3}),
             ], spacing=14, run_spacing=14),
             status_text,
-        ], spacing=16),
-        palette(), padding=22,
+        ], spacing=12),
+        palette(), padding=18,
     )
 
     results_divider = ft.Divider(height=1, color=palette()["border"])
@@ -422,8 +434,8 @@ def main(
             ft.Row([classification, payment_filter], wrap=True),
             search_field,
             table_container,
-        ], spacing=18),
-        palette(), padding=22,
+        ], spacing=12),
+        palette(), padding=18,
     )
 
     primary_texts = (result_title, empty_title, total_value, balance_value, header_title, filters_title)
@@ -466,7 +478,7 @@ def main(
     theme_button.on_click = toggle_theme
     layout = ft.Column([
         header,
-        ft.Container(content=ft.Column([filters, metrics, results], spacing=20, scroll=ft.ScrollMode.AUTO), padding=24, expand=True),
+        ft.Container(content=ft.Column([filters, metrics, results], spacing=14, scroll=ft.ScrollMode.AUTO), padding=20, expand=True),
     ], expand=True, spacing=0)
     if not embedded:
         page.add(*layout.controls)

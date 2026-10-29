@@ -79,7 +79,7 @@ def main(
     filter_responsible_val = "Todos"
     search_query = ""
 
-    content_area = ft.Container(padding=24)
+    content_area = ft.Container(padding=20)
     layout = ft.Column(
         expand=True,
         spacing=0,
@@ -374,7 +374,7 @@ def main(
 
         # Build Header
         header = ft.Container(
-            padding=ft.padding.symmetric(horizontal=32, vertical=20),
+            padding=ft.padding.symmetric(horizontal=24, vertical=16),
             border=ft.border.only(bottom=ft.BorderSide(1, c["border"])),
             bgcolor=c["surface"],
             content=ft.Column([
@@ -386,18 +386,18 @@ def main(
 
         if not transactions:
             empty_view = ft.Container(
-                height=420,
+                height=320,
                 alignment=ft.alignment.center,
-                padding=60,
+                padding=36,
                 content=ft.Column([
                     ft.Container(
-                        ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=52, color=c["accent"]),
-                        padding=20,
+                        ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=42, color=c["accent"]),
+                        padding=14,
                         bgcolor=c["hero"],
-                        border_radius=24,
+                        border_radius=18,
                     ),
                     ft.Container(height=4),
-                    ft.Text("Nenhum arquivo do DDA carregado", size=20, weight=ft.FontWeight.W_600, color=c["text"]),
+                    ft.Text("Nenhum arquivo do DDA carregado", size=18, weight=ft.FontWeight.W_600, color=c["text"]),
                     ft.Text("Importe a planilha Excel (.xlsx) ou extrato do Itaú (.csv) para cruzar com os títulos do CMFlex.",
                             size=14, color=c["muted"], text_align=ft.TextAlign.CENTER),
                     ft.Container(height=12),
@@ -430,14 +430,18 @@ def main(
             return ft.Container(
                 content=ft.Column([
                     ft.Row([
-                        ft.Icon(icon, color=color_hex, size=20),
-                        ft.Text(title, size=11, color=c["muted"], weight=ft.FontWeight.W_600),
+                        ft.Icon(icon, color=color_hex, size=18),
+                        ft.Text(title, size=10, color=c["muted"], weight=ft.FontWeight.W_600,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, tooltip=title),
                     ], spacing=6),
-                    ft.Text(value, size=22, weight=ft.FontWeight.W_700, color=c["text"]),
-                    ft.Text(sub, size=11, color=c["muted"]),
-                ], spacing=4),
-                padding=16,
-                border_radius=12,
+                    ft.Row([
+                        ft.Text(value, size=20, weight=ft.FontWeight.W_700, color=c["text"]),
+                        ft.Container(expand=True),
+                        ft.Text(sub, size=11, color=c["muted"]),
+                    ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ], spacing=2, tight=True),
+                padding=12,
+                border_radius=10,
                 bgcolor=c["surface"],
                 border=ft.border.all(1, c["border"]),
                 expand=True,
@@ -445,10 +449,10 @@ def main(
 
         metrics_row = ft.Row([
             metric_card("TOTAL DDA", str(total_count), _money(total_val), ft.Icons.RECEIPT_LONG_OUTLINED, c["info"]),
-            metric_card("LANÇADOS NO ERP", str(len(lanc_items)), _money(sum(it.transaction.amount for it in lanc_items)), ft.Icons.CHECK_CIRCLE_OUTLINE, "#10B981"),
+            metric_card("LANÇADOS NO CMFLEX", str(len(lanc_items)), _money(sum(it.transaction.amount for it in lanc_items)), ft.Icons.CHECK_CIRCLE_OUTLINE, "#10B981"),
             metric_card("NÃO LANÇADOS", str(len(nao_lanc_items)), _money(sum(it.transaction.amount for it in nao_lanc_items)), ft.Icons.ERROR_OUTLINE, "#EF4444"),
             metric_card("LANÇADOS OC", str(len(lanc_oc_items)), _money(sum(it.transaction.amount for it in lanc_oc_items)), ft.Icons.WARNING_AMBER_OUTLINED, "#F59E0B"),
-        ], spacing=14)
+        ], spacing=10)
 
         # Filters
         sheet_dropdown = ft.Dropdown(
@@ -546,6 +550,40 @@ def main(
         filtered = get_filtered_items()
         table_rows = []
 
+        def compute_width() -> int:
+            if available_width is not None:
+                available = available_width()
+                if isinstance(available, (int, float)) and available > 700:
+                    return int(available)
+            if isinstance(page.width, (int, float)) and page.width > 700:
+                return int(page.width - 40)
+            return 1618
+
+        minimum_width = 1618
+        target_width = max(minimum_width, compute_width())
+        extra_width = target_width - minimum_width
+        supplier_width = 220 + round(extra_width * 0.30)
+        observation_width = 190 + round(extra_width * 0.25)
+        responsible_width = 150 + round(extra_width * 0.15)
+        document_width = 220 + extra_width - (
+            supplier_width - 220 + observation_width - 190 + responsible_width - 150
+        )
+
+        def table_text(value: str, width: int, *, color: str, size: int = 12,
+                       weight=None, lines: int = 2) -> ft.Container:
+            return ft.Container(
+                width=width,
+                content=ft.Text(
+                    value,
+                    size=size,
+                    color=color,
+                    weight=weight,
+                    max_lines=lines,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                    tooltip=value,
+                ),
+            )
+
         for item in filtered:
             tx = item.transaction
             doc = item.matched_document
@@ -565,26 +603,30 @@ def main(
             table_rows.append(
                 ft.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(tx.sheet_name, size=11, weight=ft.FontWeight.W_600, color=c["accent"])),
-                        ft.DataCell(ft.Text(tx.due_date.strftime("%d/%m/%Y") if tx.due_date else "—", size=12, color=c["text"])),
-                        ft.DataCell(ft.Text(tx.supplier, size=12, color=c["text"], no_wrap=True, tooltip=tx.supplier)),
-                        ft.DataCell(ft.Text(tx.formatted_cnpj, size=11, color=c["muted"], no_wrap=True)),
-                        ft.DataCell(ft.Text(tx.document_number or "—", size=12, color=c["text"], no_wrap=True)),
-                        ft.DataCell(ft.Text(_money(tx.amount), size=12, weight=ft.FontWeight.W_600, color=c["text"])),
-                        ft.DataCell(ft.Text(st_val, size=11, weight=ft.FontWeight.W_700, color=st_color, no_wrap=True)),
+                        ft.DataCell(table_text(tx.sheet_name, 80, color=c["accent"], size=11,
+                                               weight=ft.FontWeight.W_600, lines=2)),
+                        ft.DataCell(table_text(tx.due_date.strftime("%d/%m/%Y") if tx.due_date else "—",
+                                               82, color=c["text"], lines=1)),
+                        ft.DataCell(table_text(tx.supplier, supplier_width, color=c["text"], lines=2)),
+                        ft.DataCell(table_text(tx.formatted_cnpj, 125, color=c["muted"], size=11, lines=2)),
+                        ft.DataCell(table_text(tx.document_number or "—", 100, color=c["text"], lines=2)),
+                        ft.DataCell(table_text(_money(tx.amount), 90, color=c["text"],
+                                               weight=ft.FontWeight.W_600, lines=1)),
+                        ft.DataCell(table_text(st_val, 105, color=st_color, size=11,
+                                               weight=ft.FontWeight.W_700, lines=2)),
                         ft.DataCell(ft.Container(
-                            content=ft.Text(obs_val or "OK", size=11, weight=ft.FontWeight.W_600 if has_obs_pendency else ft.FontWeight.NORMAL, color="#B45309" if has_obs_pendency else c["muted"], no_wrap=True),
+                            width=observation_width,
+                            content=ft.Text(obs_val or "OK", size=11, weight=ft.FontWeight.W_600 if has_obs_pendency else ft.FontWeight.NORMAL, color="#B45309" if has_obs_pendency else c["muted"], max_lines=2, overflow=ft.TextOverflow.ELLIPSIS, tooltip=obs_val or "OK"),
                             padding=ft.padding.symmetric(horizontal=6, vertical=2) if has_obs_pendency else None,
                             border_radius=4,
                             bgcolor="#FEF08A" if has_obs_pendency and not dark else "#453408" if has_obs_pendency else None,
                         )),
-                        ft.DataCell(ft.Text(resp_val or "—", size=12, weight=ft.FontWeight.W_600 if resp_val else ft.FontWeight.NORMAL, color=c["text"], no_wrap=True)),
-                        ft.DataCell(ft.Text(
-                            f"#{doc.launch_number} ({doc.installment}) | {doc.company}" if doc else "Não lançado no ERP",
-                            size=12,
-                            color=c["text"] if doc else "#EF4444",
-                            no_wrap=True,
-                            tooltip=f"Histórico: {doc.history}" if doc and doc.history else None,
+                        ft.DataCell(table_text(resp_val or "—", responsible_width, color=c["text"],
+                                               weight=ft.FontWeight.W_600 if resp_val else ft.FontWeight.NORMAL,
+                                               lines=2)),
+                        ft.DataCell(table_text(
+                            f"#{doc.launch_number} ({doc.installment}) | {doc.company}" if doc else "Não lançado no CMFlex",
+                            document_width, color=c["text"] if doc else "#EF4444", lines=3,
                         )),
                         ft.DataCell(ft.IconButton(
                             ft.Icons.ATTACH_FILE,
@@ -603,18 +645,7 @@ def main(
                 )
             )
 
-        def compute_width() -> int:
-            if available_width is not None:
-                aw = available_width()
-                if isinstance(aw, (int, float)) and aw > 700:
-                    return int(aw)
-            if isinstance(page.width, (int, float)) and page.width > 700:
-                return int(page.width - 150)
-            return 1300
-
-        target_width = max(1250, compute_width())
-        extra_width = max(0, target_width - 1200)
-        col_spacing = 16 + (extra_width // 12)
+        col_spacing = 12
 
         data_table = ft.DataTable(
             columns=[
@@ -634,11 +665,11 @@ def main(
             rows=table_rows,
             width=target_width,
             heading_row_color=c["soft"],
-            horizontal_margin=20,
+            horizontal_margin=14,
             column_spacing=col_spacing,
-            heading_row_height=52,
+            heading_row_height=46,
             data_row_min_height=54,
-            data_row_max_height=64,
+            data_row_max_height=80,
         )
 
         if isinstance(page.height, (int, float)) and page.height > 600:
@@ -646,11 +677,11 @@ def main(
         else:
             max_viewport = 600
 
-        viewport_height = min(max_viewport, 52 + max(1, len(table_rows)) * 60 + 20)
+        viewport_height = min(max_viewport, 46 + max(1, len(table_rows)) * 70 + 16)
         table_body = ft.Column([data_table], width=target_width, height=viewport_height, scroll=ft.ScrollMode.ALWAYS)
 
         table_card = ft.Container(
-            content=ft.Row([table_body], scroll=ft.ScrollMode.ALWAYS),
+            content=ft.Row([table_body], scroll=ft.ScrollMode.ALWAYS, expand=True),
             border=ft.border.all(1, c["border"]),
             border_radius=12,
             bgcolor=c["surface"],
@@ -672,7 +703,7 @@ def main(
             action_row,
             info_bar,
             table_card,
-        ], spacing=16)
+        ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
         layout.controls = [header, content_area]
         if page:

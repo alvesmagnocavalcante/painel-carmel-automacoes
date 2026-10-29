@@ -445,14 +445,14 @@ class FlashPanelUiTests(TestCase):
                 item
                 for item in self._walk(panel_view.control)
                 if isinstance(item, ft.Container)
-                and item.height == 420
+                and item.height == 320
                 and any(
                     isinstance(child, ft.Text)
                     and child.value == "Nenhum extrato do Flash carregado"
                     for child in self._walk(item)
                 )
             )
-            self.assertEqual(empty_state.height, 420)
+            self.assertEqual(empty_state.height, 320)
             panel_view.apply_theme(False)
             panel_view.apply_theme(True)
 
@@ -473,6 +473,7 @@ class FlashPanelUiTests(TestCase):
                 provider=provider,
                 upload_dir=tmp_dir,
                 store=store,
+                available_width=lambda: 1900,
             )
             picker = page.overlay[0]
             picker.upload = MagicMock()
@@ -499,13 +500,23 @@ class FlashPanelUiTests(TestCase):
             table = next(
                 item for item in self._walk(panel_view.control) if isinstance(item, ft.DataTable)
             )
+            self.assertEqual(table.width, 1900)
+            self.assertGreater(table.rows[0].cells[1].content.width, 230)
             self.assertTrue(
                 all(
-                    isinstance(cell.content, (ft.Text, ft.IconButton))
+                    isinstance(cell.content, (ft.Text, ft.IconButton, ft.Container))
                     for row in table.rows
                     for cell in row.cells
                 )
             )
+            wrapped_cells = [
+                cell.content.content
+                for row in table.rows
+                for cell in row.cells
+                if isinstance(cell.content, ft.Container)
+                and isinstance(cell.content.content, ft.Text)
+            ]
+            self.assertTrue(any(text.max_lines and text.max_lines > 1 for text in wrapped_cells))
             viewport = next(
                 item
                 for item in self._walk(panel_view.control)

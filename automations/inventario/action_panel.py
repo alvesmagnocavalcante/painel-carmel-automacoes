@@ -45,7 +45,7 @@ def main(page, download_file=None, *, provider=None, store=None):
         return panel_text(value, palette(), **kwargs)
 
     def surface(content):
-        return surface_card(content, palette(), radius=20, padding=22)
+        return surface_card(content, palette(), radius=16, padding=18)
 
     def month_key(item):
         try:
@@ -149,8 +149,8 @@ def main(page, download_file=None, *, provider=None, store=None):
                 icon_color=colors["info"], disabled=busy, on_click=lambda _, item=item: edit(item))))
             data_rows.append(ft.DataRow(cells=cells))
         grid = ft.DataTable(columns=[ft.DataColumn(text(label, bold=True)) for label in headers], rows=data_rows,
-                            heading_row_color=colors["table"], data_row_min_height=88, data_row_max_height=88,
-                            heading_row_height=54, column_spacing=20)
+                            heading_row_color=colors["table"], data_row_min_height=72, data_row_max_height=86,
+                            heading_row_height=50, column_spacing=12)
         return ft.Row([ft.Column([grid], height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS)],
                       height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS, vertical_alignment=ft.CrossAxisAlignment.START)
 
@@ -167,11 +167,11 @@ def main(page, download_file=None, *, provider=None, store=None):
         excel_button.icon_color, pdf_button.icon_color, saved_button.color = colors["success"], colors["danger"], colors["text"]
         counts = {label: sum(item.manual.status() == label for item in items) for label in STATUSES}
         metrics = [
-            ft.Container(surface(ft.Column([
+            ft.Container(surface_card(ft.Column([
                 text(label, muted=True, size=11),
-                ft.Text(str(value), size=27, weight=ft.FontWeight.W_600,
+                ft.Text(str(value), size=20, weight=ft.FontWeight.W_600,
                         color=colors["text" if label == "Total de ações" else STATUS_SEMANTIC[label]]),
-            ], spacing=8)), col={"xs": 6, "md": 4, "xl": 2})
+            ], spacing=2, tight=True), colors, radius=12, padding=12), col={"xs": 6, "md": 4, "xl": 2})
             for label, value in (("Total de ações", len(items)), *counts.items())
         ]
         results = table(items) if items else ft.Container(text("Nenhum plano de ação na seleção.", muted=True),
@@ -200,7 +200,7 @@ def main(page, download_file=None, *, provider=None, store=None):
                            wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     text("Use o lápis para preencher. Os downloads incluem os registros filtrados e salvos.", muted=True, size=12), results,
                 ], spacing=14)),
-            ], spacing=20, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
         ]
 
     async def load(from_api):

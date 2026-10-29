@@ -90,7 +90,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
 
     def width():
         available = available_width() if available_width else page.width
-        return max(1550, available if isinstance(available, (int, float)) else 0)
+        return max(1280, available if isinstance(available, (int, float)) else 0)
 
     def resize():
         new_width = width()
@@ -108,13 +108,16 @@ def main(page, download_file=None, *, provider=None, available_width=None):
         for item in items:
             values = (item.company, item.warehouse, currency(item.stock), currency(item.loss),
                       currency(item.surplus), currency(item.difference), percentage(item.percentage), item.status)
-            data_rows.append(ft.DataRow(cells=[ft.DataCell(text(value,
-                color=palette["warning"] if index in (3, 5, 6) and item.counted and item.difference else None))
-                for index, value in enumerate(values)]))
+            widths = (175, 240, 125, 105, 105, 135, 105, 130)
+            data_rows.append(ft.DataRow(cells=[ft.DataCell(text(
+                value, width=widths[index], max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
+                tooltip=value,
+                color=palette["warning"] if index in (3, 5, 6) and item.counted and item.difference else None,
+            )) for index, value in enumerate(values)]))
         data_table = ft.DataTable(columns=[ft.DataColumn(text(label, bold=True), numeric=2 <= index <= 6)
             for index, label in enumerate(labels)], rows=data_rows, width=width(),
             heading_row_color=palette["table"], heading_row_height=56,
-            data_row_min_height=52, data_row_max_height=52, column_spacing=24)
+            data_row_min_height=52, data_row_max_height=64, column_spacing=14)
         table_body = ft.Column([data_table], width=width(), height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS,
                                horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         return ft.Row([table_body], height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS,
@@ -154,7 +157,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
                     ft.ResponsiveRow([company, month, ft.Container(consult, col={"xs": 12, "md": 4})], spacing=14, run_spacing=14),
                     text(message, color=palette["warning"] if failed else palette["muted"]),
                 ], spacing=14)),
-                ft.ResponsiveRow(metrics, spacing=14, run_spacing=14),
+        ft.ResponsiveRow(metrics, spacing=10, run_spacing=10),
                 surface(ft.Column([
                     text("Impacto financeiro por almoxarifado" if len({item.company for item in items}) == 1
                          else "Impacto financeiro por empresa", bold=True, size=18),
@@ -168,7 +171,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
                     text("Almoxarifados sem contagem ficam fora dos totais e do gráfico.", muted=True, size=12),
                     results,
                 ], spacing=14, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
-            ], spacing=20, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
         ]
 
     async def load(_):

@@ -219,7 +219,7 @@ def generate_collection_email(items: Sequence[DdaReconciliationItem]) -> str:
             tx = it.transaction
             doc = it.matched_document
             venc_str = tx.due_date.strftime("%d/%m/%Y") if tx.due_date else "Sem venc."
-            doc_str = f" [Doc CMFlex #{doc.launch_number}]" if doc else " [NÃO LANÇADO NO ERP]"
+            doc_str = f" [Doc CMFlex #{doc.launch_number}]" if doc else " [NÃO LANÇADO NO CMFLEX]"
             obs_str = f" -> {it.effective_observation}" if it.effective_observation else ""
 
             lines.append(

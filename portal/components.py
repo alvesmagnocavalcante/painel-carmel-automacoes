@@ -22,32 +22,34 @@ def module_card(
 ) -> ft.Container:
     """Standard dashboard card for an automation module."""
     return ft.Container(
-        col={"xs": 12, "lg": 6},
-        padding=28,
-        border_radius=22,
+        col={"xs": 12, "md": 6, "xl": 4},
+        padding=20,
+        border_radius=16,
         bgcolor=colors["surface"],
         border=ft.border.all(1, colors["border"]),
         content=ft.Column([
             ft.Container(
-                ft.Icon(icon, color=colors[semantic], size=27),
-                padding=14,
+                ft.Icon(icon, color=colors[semantic], size=22),
+                padding=10,
                 bgcolor=colors[f"{semantic}_soft"],
-                border_radius=16,
+                border_radius=12,
             ),
-            ft.Text(name, size=25, weight=ft.FontWeight.W_600, color=colors["text"]),
-            ft.Text(title, size=15, weight=ft.FontWeight.W_600, color=colors["text"]),
-            ft.Text(description, size=13, color=colors["muted"]),
-            ft.Divider(height=18, color=colors["border"]),
+            ft.Text(name, size=20, weight=ft.FontWeight.W_600, color=colors["text"]),
+            ft.Text(title, size=13, weight=ft.FontWeight.W_600, color=colors["text"],
+                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, tooltip=title),
+            ft.Text(description, size=12, color=colors["muted"], max_lines=2,
+                    overflow=ft.TextOverflow.ELLIPSIS, tooltip=description),
+            ft.Divider(height=10, color=colors["border"]),
             ft.ElevatedButton(
                 button,
                 icon=ft.Icons.ARROW_FORWARD,
                 bgcolor=colors["brand_soft"],
                 color=colors["on_brand"],
-                height=46,
-                style=ft.ButtonStyle(elevation=0, shape=ft.RoundedRectangleBorder(radius=12)),
+                height=40,
+                style=ft.ButtonStyle(elevation=0, shape=ft.RoundedRectangleBorder(radius=10)),
                 on_click=lambda _: on_navigate(route),
             ),
-        ], spacing=14),
+        ], spacing=8, tight=True),
     )
 
 

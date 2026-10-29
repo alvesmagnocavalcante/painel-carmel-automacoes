@@ -125,21 +125,24 @@ def metric_card(
     colors: dict[str, str],
     *,
     col: dict,
-    value_size: int = 22,
+    value_size: int = 20,
 ) -> ft.Container:
     return surface_card(
         ft.Row([
             ft.Container(
-                ft.Icon(icon, color=colors[semantic]),
+                ft.Icon(icon, color=colors[semantic], size=19),
                 bgcolor=colors[f"{semantic}_soft"],
-                padding=10,
-                border_radius=10,
+                padding=8,
+                border_radius=9,
             ),
             ft.Column([
-                panel_text(label, colors, muted=True, size=12),
+                panel_text(label, colors, muted=True, size=11, max_lines=1,
+                           overflow=ft.TextOverflow.ELLIPSIS, tooltip=label),
                 panel_text(value, colors, bold=True, size=value_size),
-            ], spacing=3),
-        ], spacing=12),
+            ], spacing=1, tight=True),
+        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         colors,
+        radius=12,
+        padding=12,
         col=col,
     )

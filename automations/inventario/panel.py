@@ -59,7 +59,7 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
     def table_width(month_count):
         available = available_width() if available_width is not None else (page.width - 90 if isinstance(page.width, (int, float)) else 0)
         available = available if isinstance(available, (int, float)) else 0
-        return max(available, 440 + month_count * 300)
+        return max(available, 300 + month_count * 270)
 
     def resize():
         if table_body is None:
@@ -82,7 +82,10 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
         data_rows = []
         for line in lines:
             bold = line.kind != "warehouse"
-            cells = [ft.DataCell(text(line.label, bold=bold))]
+            cells = [ft.DataCell(text(
+                line.label, bold=bold, width=260, max_lines=2,
+                overflow=ft.TextOverflow.ELLIPSIS, tooltip=line.label,
+            ))]
             for item in line.values:
                 values = (str(item.counted), str(item.different), _percentage(item.percentage)) if item else ("—", "—", "—")
                 for index, value in enumerate(values):
@@ -90,9 +93,9 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
                     cells.append(ft.DataCell(text(value, bold=bold, color=color)))
             row_color = colors["info_soft"] if line.kind == "company" else colors["soft"] if line.kind == "total" else None
             data_rows.append(ft.DataRow(cells=cells, color=row_color))
-        data_table = ft.DataTable(columns=columns, rows=data_rows, heading_row_height=64,
-                                  heading_row_color=colors["table"], column_spacing=24,
-                                  data_row_min_height=52, data_row_max_height=52,
+        data_table = ft.DataTable(columns=columns, rows=data_rows, heading_row_height=58,
+                                  heading_row_color=colors["table"], column_spacing=14,
+                                  data_row_min_height=52, data_row_max_height=64,
                                   width=table_width(len(months)))
         table_months = len(months)
         table_body = ft.Column([data_table], height=TABLE_HEIGHT, width=data_table.width,
@@ -126,7 +129,7 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
             metric_card("Contados no período", str(total_counted), ft.Icons.INVENTORY_2_OUTLINED, "info", colors, col=col, value_size=23),
             metric_card("Com diferença", str(total_different), ft.Icons.WARNING_AMBER_ROUNDED, "warning", colors, col=col, value_size=23),
             metric_card("Percentual de diferença", _percentage(percent), ft.Icons.PERCENT, "money", colors, col=col, value_size=23),
-        ], spacing=14, run_spacing=14)
+        ], spacing=10, run_spacing=10)
         results = table(selected, months_between(*snapshot)) if selected and snapshot else ft.Container(
             text("Nenhum inventário no período e empresa selecionados." if snapshot else "Os resultados da consulta aparecerão aqui.", muted=True),
             padding=28, height=TABLE_HEIGHT, alignment=ft.alignment.center)
@@ -155,14 +158,14 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
                          if single_company else "Percentual ponderado no período consultado. Passe o mouse nas barras para ver os valores.",
                          muted=True, size=12),
                     company_chart(selected, colors),
-                ], spacing=10, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), height=360),
+                ], spacing=10, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), height=330),
                 surface(ft.Column([
                     ft.Row([ft.Column([text("Inventário mensal", bold=True, size=18), text(period, muted=True)], spacing=3), download_button],
                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
                     text("Totais somam os almoxarifados. — indica ausência de dados; zero indica uma contagem sem diferença.", muted=True, size=12),
                     results,
-                ], spacing=16, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
-            ], spacing=20, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
+                ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
         ]
 
     async def consult(_):

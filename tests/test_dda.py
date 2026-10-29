@@ -266,7 +266,7 @@ class DdaReconciliationTests(TestCase):
         self.assertEqual(items[1].effective_observation, OBS_SEM_BOLETO_E_DADOS_BAN)
         self.assertEqual(items[1].effective_responsible, "DEVID SILVA")
 
-        # tx_unmatched -> Not in ERP -> NÃO LANÇ.
+        # tx_unmatched -> Not in CMFlex -> NÃO LANÇ.
         self.assertEqual(items[2].effective_status, STATUS_NAO_LANC)
         self.assertEqual(items[2].effective_observation, OBS_NAO_LOCALIZADO)
         self.assertIsNone(items[2].matched_document)
@@ -431,6 +431,7 @@ class DdaPanelTests(TestCase):
                 provider=provider,
                 upload_dir=tmp_dir,
                 store=store,
+                available_width=lambda: 1900,
             )
 
             # Initially shows empty/upload screen
@@ -464,6 +465,8 @@ class DdaPanelTests(TestCase):
                 item for item in self._walk(panel_view.control) if isinstance(item, ft.DataTable)
             )
             self.assertEqual(len(table.rows), 1)
+            self.assertEqual(table.width, 1900)
+            self.assertGreater(table.rows[0].cells[2].content.width, 220)
 
             # Test filter interactions
             dropdowns = [item for item in self._walk(panel_view.control) if isinstance(item, ft.Dropdown)]

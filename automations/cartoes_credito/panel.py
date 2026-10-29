@@ -111,7 +111,7 @@ def main(page: ft.Page, download_file=None, *, provider=None, upload_dir: str | 
         search_options.text_color = search_options.collapsed_text_color = palette["text"]
         search_options.icon_color = search_options.collapsed_icon_color = palette["muted"]
         header = ft.Container(
-            padding=ft.padding.symmetric(horizontal=32, vertical=20),
+            padding=ft.padding.symmetric(horizontal=24, vertical=16),
             border=ft.border.only(bottom=ft.BorderSide(1, palette["border"])),
             bgcolor=palette["surface"],
             content=ft.Column([
@@ -122,9 +122,9 @@ def main(page: ft.Page, download_file=None, *, provider=None, upload_dir: str | 
         )
         layout.controls = [
             header,
-            ft.Container(ft.Column([search_options, bank.control], spacing=14,
+            ft.Container(ft.Column([search_options, bank.control], spacing=12,
                                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
-                         padding=24, expand=True),
+                         padding=20, expand=True),
         ]
         bank.render()
         page.update()

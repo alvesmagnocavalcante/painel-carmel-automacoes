@@ -28,7 +28,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         def card(name, title, description, icon, route, button, semantic):
             return module_card(name, title, description, icon, route, button, semantic, colors, page.go)
 
-        return ft.Container(padding=32, content=ft.Column([
+        return ft.Container(padding=24, content=ft.Column([
             ft.Container(ft.ResponsiveRow([
                 ft.Container(ft.Column([
                     ft.Text("FINANCEIRO • CARMEL HOTÉIS", size=11, weight=ft.FontWeight.W_600,
@@ -44,7 +44,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
                     visible=isinstance(page.width, (int, float)) and page.width >= 1100),
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER), padding=30, border_radius=22,
                 bgcolor=colors["hero"], border=ft.border.all(1, colors["border"])),
-            ft.Container(height=12),
+            ft.Container(height=6),
             ft.Text("Automações disponíveis", size=18, weight=ft.FontWeight.W_600, color=colors["text"]),
             ft.Text("Selecione a automação para começar.", size=13, color=colors["muted"]),
             ft.Container(height=4),
@@ -59,13 +59,13 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
                      "Importe a fatura XLSX, confira os PDFs e registre pendências.",
                      ft.Icons.CREDIT_CARD_OUTLINED, "/cartoes", "Conferir cartões", "warning"),
                 card("Cartão Flash", "Conciliação de despesas corporativas",
-                     "Importe o extrato Flash, identifique pendências no ERP e gere cobranças.",
+                     "Importe o extrato Flash, identifique pendências no CMFlex e gere cobranças.",
                      ft.Icons.BOLT_OUTLINED, "/flash", "Conferir Flash", "money"),
                 card("DDA", "Conferência da planilha do DDA",
                      "Importe o DDA do Itaú, concilie com o CMFlex e gere cobranças de boletos.",
                      ft.Icons.RECEIPT_LONG_OUTLINED, "/dda", "Conferir DDA", "info"),
-            ], spacing=20, run_spacing=20),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO))
+            ], spacing=14, run_spacing=14),
+        ], spacing=8, scroll=ft.ScrollMode.AUTO))
 
     def navigation():
         colors = palette()
@@ -153,10 +153,10 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
     action_plan = build_action_plan(page, download_file=attachment_download)
     cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
     flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir,
-                              available_width=lambda: page.width - sidebar.width - 90
+                              available_width=lambda: page.width - sidebar.width - 40
                               if isinstance(page.width, (int, float)) else None)
     dda_panel = build_dda(page, download_file=attachment_download, upload_dir=card_upload_dir,
-                          available_width=lambda: page.width - sidebar.width - 90
+                          available_width=lambda: page.width - sidebar.width - 40
                           if isinstance(page.width, (int, float)) else None)
 
     panels = {

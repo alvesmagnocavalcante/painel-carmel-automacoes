@@ -79,7 +79,7 @@ def main(
     # The portal body is already expanded by its parent Row. Keeping another
     # expanded Container/Column pair here makes Flet calculate a zero-height
     # content area in the web client, leaving only the header visible.
-    content_area = ft.Container(padding=24)
+    content_area = ft.Container(padding=20)
     layout = ft.Column(
         expand=True,
         spacing=0,
@@ -381,7 +381,7 @@ def main(
 
         # Build Header
         header = ft.Container(
-            padding=ft.padding.symmetric(horizontal=32, vertical=20),
+            padding=ft.padding.symmetric(horizontal=24, vertical=16),
             border=ft.border.only(bottom=ft.BorderSide(1, c["border"])),
             bgcolor=c["surface"],
             content=ft.Column([
@@ -394,18 +394,18 @@ def main(
         # Build Main Body Content
         if statement is None:
             empty_view = ft.Container(
-                height=420,
+                height=320,
                 alignment=ft.alignment.center,
-                padding=60,
+                padding=36,
                 content=ft.Column([
                     ft.Container(
-                        ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=52, color=c["accent"]),
-                        padding=20,
+                        ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=42, color=c["accent"]),
+                        padding=14,
                         bgcolor=c["hero"],
-                        border_radius=24,
+                        border_radius=18,
                     ),
                     ft.Container(height=4),
-                    ft.Text("Nenhum extrato do Flash carregado", size=20, weight=ft.FontWeight.W_600, color=c["text"]),
+                    ft.Text("Nenhum extrato do Flash carregado", size=18, weight=ft.FontWeight.W_600, color=c["text"]),
                     ft.Text("Importe um ou vários arquivos Excel (.xlsx) ou CSV da Flash para cruzar as despesas.",
                             size=14, color=c["muted"], text_align=ft.TextAlign.CENTER),
                     ft.Container(height=12),
@@ -432,15 +432,17 @@ def main(
             def kpi_card(title: str, count: int, val: Decimal, text_color: str, bg_color: str):
                 return ft.Container(
                     content=ft.Column([
-                        ft.Text(title.upper(), size=11, weight=ft.FontWeight.W_600, color=text_color),
+                        ft.Text(title.upper(), size=10, weight=ft.FontWeight.W_600, color=text_color,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, tooltip=title),
                         ft.Row([
-                            ft.Text(str(count), size=24, weight=ft.FontWeight.BOLD, color=c["text"]),
-                            ft.Text(f"item{'s' if count != 1 else ''}", size=12, color=c["muted"]),
-                        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
-                        ft.Text(_money(val), size=13, weight=ft.FontWeight.W_500, color=text_color),
-                    ], spacing=4),
-                    padding=16,
-                    border_radius=12,
+                            ft.Text(str(count), size=20, weight=ft.FontWeight.BOLD, color=c["text"]),
+                            ft.Text(f"item{'s' if count != 1 else ''}", size=11, color=c["muted"]),
+                            ft.Container(expand=True),
+                            ft.Text(_money(val), size=12, weight=ft.FontWeight.W_600, color=text_color),
+                        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+                    ], spacing=2, tight=True),
+                    padding=12,
+                    border_radius=10,
                     bgcolor=bg_color,
                     border=ft.border.all(1, c["border"]),
                     col={"xs": 12, "sm": 6, "md": 3},
@@ -451,7 +453,7 @@ def main(
                 kpi_card("Pendente de Lançamento", len(pending_launch), val_launch, "#EF4444", c["surface"]),
                 kpi_card("Pendente de Prestação", len(pending_settle), val_settle, "#F59E0B", c["surface"]),
                 kpi_card("Prestado Contas", len(settled), val_settled, "#10B981", c["surface"]),
-            ], spacing=16, run_spacing=16)
+            ], spacing=10, run_spacing=10)
 
             # Filter controls
             all_hotels = sorted({i.effective_hotel for i in reconciled_items if i.effective_hotel})
@@ -551,6 +553,41 @@ def main(
             # Table
             filtered_items = get_filtered_items()
             table_rows = []
+
+            def compute_target_width() -> int:
+                if available_width is not None:
+                    available = available_width()
+                    if isinstance(available, (int, float)) and available > 600:
+                        return int(available)
+                if isinstance(page.width, (int, float)) and page.width > 600:
+                    return int(page.width - 40)
+                return 1420
+
+            minimum_width = 1420
+            target_width = max(minimum_width, compute_target_width())
+            extra_width = target_width - minimum_width
+            description_width = 230 + round(extra_width * 0.30)
+            person_width = 170 + round(extra_width * 0.20)
+            hotel_width = 140 + round(extra_width * 0.15)
+            document_width = 315 + extra_width - (
+                description_width - 230 + person_width - 170 + hotel_width - 140
+            )
+
+            def table_text(value: str, width: int, *, color: str, size: int = 12,
+                           weight=None, lines: int = 2) -> ft.Container:
+                return ft.Container(
+                    width=width,
+                    content=ft.Text(
+                        value,
+                        size=size,
+                        color=color,
+                        weight=weight,
+                        max_lines=lines,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                        tooltip=value,
+                    ),
+                )
+
             for item in filtered_items:
                 tx = item.transaction
                 doc = item.matched_document
@@ -565,33 +602,19 @@ def main(
                 table_rows.append(
                     ft.DataRow(
                         cells=[
-                            ft.DataCell(ft.Text(tx.purchase_date.strftime("%d/%m/%Y"), size=12, color=c["text"])),
-                            ft.DataCell(ft.Text(
-                                tx.description,
-                                size=12,
-                                color=c["text"],
-                                no_wrap=True,
-                                tooltip=" | ".join(
-                                    value for value in (tx.description, tx.payment_method) if value
-                                ),
-                            )),
-                            ft.DataCell(ft.Text(_money(tx.amount), size=12, weight=ft.FontWeight.W_600, color=c["text"])),
-                            ft.DataCell(ft.Text(tx.person, size=12, color=c["text"], no_wrap=True)),
-                            ft.DataCell(ft.Text(item.effective_hotel, size=12, color=c["muted"], no_wrap=True)),
-                            ft.DataCell(ft.Text(
-                                item.status,
-                                size=11,
-                                weight=ft.FontWeight.W_600,
-                                color=status_color,
-                                no_wrap=True,
-                            )),
-                            ft.DataCell(ft.Text(
+                            ft.DataCell(table_text(tx.purchase_date.strftime("%d/%m/%Y"), 82,
+                                                   color=c["text"], lines=1)),
+                            ft.DataCell(table_text(tx.description, description_width, color=c["text"], lines=2)),
+                            ft.DataCell(table_text(_money(tx.amount), 88, color=c["text"],
+                                                   weight=ft.FontWeight.W_600, lines=1)),
+                            ft.DataCell(table_text(tx.person, person_width, color=c["text"], lines=2)),
+                            ft.DataCell(table_text(item.effective_hotel, hotel_width, color=c["muted"], lines=2)),
+                            ft.DataCell(table_text(item.status, 155, color=status_color, size=11,
+                                                   weight=ft.FontWeight.W_600, lines=2)),
+                            ft.DataCell(table_text(
                                 f"#{doc.launch_number} ({doc.display_batch}) | {doc.supplier} | {doc.company}"
-                                if doc else "Não lançado no ERP",
-                                size=12,
-                                color=c["text"] if doc else "#EF4444",
-                                no_wrap=True,
-                                tooltip=f"Situação no CMFlex: {doc.cmflex_situation}" if doc and doc.cmflex_situation else None,
+                                if doc else "Não lançado no CMFlex",
+                                document_width, color=c["text"] if doc else "#EF4444", lines=3,
                             )),
                             ft.DataCell(ft.IconButton(
                                 ft.Icons.ATTACH_FILE,
@@ -610,18 +633,7 @@ def main(
                     )
                 )
 
-            def compute_target_width() -> int:
-                if available_width is not None:
-                    aw = available_width()
-                    if isinstance(aw, (int, float)) and aw > 600:
-                        return int(aw)
-                if isinstance(page.width, (int, float)) and page.width > 600:
-                    return int(page.width - 150)
-                return 1200
-
-            target_width = max(1150, compute_target_width())
-            extra_width = max(0, target_width - 1100)
-            dynamic_spacing = 22 + (extra_width // 8)
+            dynamic_spacing = 14
 
             data_table = ft.DataTable(
                 columns=[
@@ -638,11 +650,11 @@ def main(
                 rows=table_rows,
                 width=target_width,
                 heading_row_color=c["soft"],
-                horizontal_margin=24,
+                horizontal_margin=16,
                 column_spacing=dynamic_spacing,
-                heading_row_height=56,
+                heading_row_height=46,
                 data_row_min_height=58,
-                data_row_max_height=68,
+                data_row_max_height=82,
             )
 
             if isinstance(page.height, (int, float)) and page.height > 600:
@@ -650,7 +662,7 @@ def main(
             else:
                 max_viewport = 640
 
-            viewport_height = min(max_viewport, 56 + max(1, len(table_rows)) * 64 + 20)
+            viewport_height = min(max_viewport, 46 + max(1, len(table_rows)) * 72 + 16)
             table_body = ft.Column(
                 [data_table],
                 width=target_width,
@@ -666,6 +678,7 @@ def main(
                     content=ft.Row(
                         [table_body],
                         height=viewport_height,
+                        expand=True,
                         scroll=ft.ScrollMode.ALWAYS,
                         vertical_alignment=ft.CrossAxisAlignment.START,
                     ),
@@ -690,7 +703,8 @@ def main(
                     action_row,
                     table_container,
                 ],
-                spacing=16,
+                spacing=12,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             )
 
         layout.controls = [header, content_area]

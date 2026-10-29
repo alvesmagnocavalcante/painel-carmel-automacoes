@@ -58,7 +58,7 @@ def inventory_header(
             ft.Text(subtitle, size=13, color=colors["muted"]),
             inventory_navigation(page, colors, financial=financial, action_plan=action_plan),
         ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
-        padding=ft.padding.symmetric(horizontal=32, vertical=20),
+        padding=ft.padding.symmetric(horizontal=24, vertical=16),
         bgcolor=colors["surface"],
         border=ft.border.only(bottom=ft.BorderSide(1, colors["border"])),
     )

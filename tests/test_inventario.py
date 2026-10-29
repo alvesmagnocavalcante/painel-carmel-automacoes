@@ -103,7 +103,7 @@ class InventoryTests(TestCase):
             vertical = next(item for item in walk(view.control) if isinstance(item, ft.Column) and item.controls and isinstance(item.controls[0], ft.DataTable))
             self.assertEqual(vertical.height, 420)
             self.assertEqual(vertical.controls[0].data_row_min_height, 52)
-            self.assertEqual(vertical.controls[0].data_row_max_height, 52)
+            self.assertEqual(vertical.controls[0].data_row_max_height, 64)
             labels = [item.value for item in walk(view.control) if isinstance(item, ft.Text)]
             self.assertIn("Diferenças por empresa" if value == "Todos" else "Diferenças por almoxarifado", labels)
             self.assertTrue(view.control._build_add_commands())
@@ -148,7 +148,7 @@ class InventoryTests(TestCase):
         self.assertFalse(view.resize())
         width.return_value = 600
         self.assertTrue(view.resize())
-        self.assertEqual(table.width, 1040)
+        self.assertEqual(table.width, 840)
         self.assertIs(next(item for item in walk(view.control) if isinstance(item, ft.DataTable)), table)
         provider.fetch.assert_called_once()
 

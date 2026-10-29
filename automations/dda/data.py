@@ -27,7 +27,7 @@ OBS_SEM_DADOS_BAN = "SEM DADOS BANCARIOS"
 OBS_VALOR_DIVERGENTE = "VALOR DIVERGENTE"
 OBS_SEM_ALTERACAO = "SEM ALTERAÇÃO"
 OBS_OK = "OK"
-OBS_NAO_LOCALIZADO = "NÃO LOCALIZADO NO ERP"
+OBS_NAO_LOCALIZADO = "NÃO LOCALIZADO NO CMFLEX"
 
 
 def normalize_text(value: object) -> str:
@@ -149,7 +149,7 @@ class DdaTransaction:
 
 @dataclass(frozen=True)
 class CmflexOpenDocument:
-    """Open payable document from CMFlex ERP (documentos_em_aberto)."""
+    """Open payable document from CMFlex (documentos_em_aberto)."""
     document_id: int
     company_id: int
     company: str
@@ -190,7 +190,7 @@ class CmflexOpenDocument:
 
 @dataclass
 class DdaReconciliationItem:
-    """A reconciled pair of DDA transaction and ERP document."""
+    """A reconciled pair of DDA transaction and CMFlex document."""
     transaction: DdaTransaction
     matched_document: CmflexOpenDocument | None = None
     status: str = STATUS_NAO_LANC

@@ -199,7 +199,7 @@ def reconcile_dda(
                     responsible=divergent_doc.responsible or "",
                 )
             else:
-                # Not launched in ERP
+                # Not launched in CMFlex
                 item = DdaReconciliationItem(
                     transaction=tx,
                     matched_document=None,
