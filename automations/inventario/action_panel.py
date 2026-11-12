@@ -29,7 +29,7 @@ def main(page, download_file=None, *, provider=None, store=None):
     company = ft.Dropdown(label="Hotel", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 4})
     month = ft.Dropdown(label="Mês do inventário", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 3})
     status = ft.Dropdown(label="Status", value="Todos", options=[ft.dropdown.Option(value) for value in ("Todos", *STATUSES)], col={"xs": 12, "md": 3})
-    search = ft.TextField(label="Pesquisar pontos de melhoria ou responsável", prefix_icon=ft.Icons.SEARCH, expand=True)
+    search = ft.TextField(label="Pesquisar pontos de melhoria, respostas ou responsável", prefix_icon=ft.Icons.SEARCH, expand=True)
     layout = ft.Column(expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def db():
@@ -59,7 +59,7 @@ def main(page, download_file=None, *, provider=None, store=None):
         return tuple(item for item in rows if (company.value == "Todos" or company.value == item.hotel)
             and (month.value == "Todos" or month.value == month_key(item))
             and (status.value == "Todos" or status.value == item.manual.status())
-            and (not query or query in f"{item.hotel} {item.improvement} {item.manual.how} {item.manual.responsible}".casefold()))
+            and (not query or query in f"{item.hotel} {item.improvement} {item.manual.how} {item.manual.responsible} {' '.join(value for _, value in item.details)}".casefold()))
 
     def update_options():
         hotels = ["Todos", *sorted({item.hotel for item in rows})]
@@ -70,6 +70,18 @@ def main(page, download_file=None, *, provider=None, store=None):
             company.value = "Todos"
         if month.value not in months:
             month.value = "Todos"
+
+    def answers(item):
+        """Remaining form answers (checklist, comments, photos, author e-mail)."""
+        colors = palette()
+        if not item.details:
+            return text("Sem respostas adicionais da auditoria.", muted=True, size=12)
+        return ft.ExpansionTile(
+            title=text(f"Respostas da auditoria ({len(item.details)})", bold=True),
+            controls=[ft.Container(ft.Column([ft.Column([
+                text(label, muted=True, size=12), text(value, selectable=True)], spacing=2, tight=True)
+                for label, value in item.details], spacing=10), padding=ft.padding.only(left=16, right=8, bottom=12))],
+            tile_padding=ft.padding.all(0), collapsed_text_color=colors["text"], text_color=colors["text"])
 
     def edit(item):
         colors = palette()
@@ -119,8 +131,9 @@ def main(page, download_file=None, *, provider=None, store=None):
         dialog = ft.AlertDialog(modal=True, title=text("Preencher plano de ação", bold=True, size=20),
             bgcolor=colors["surface"], content=ft.Container(width=740, height=610, content=ft.Column([
                 text(f"{item.hotel} • Inventário: {item.inventory_date}", bold=True),
-                text("O quê? — importado da API", muted=True, size=12), text(item.improvement, selectable=True),
-                ft.Divider(), ft.ResponsiveRow(list(fields.values()), spacing=14, run_spacing=14), error_text,
+                text("O quê? — importado da API", muted=True, size=12),
+                text(item.improvement or "Nenhum ponto de melhoria informado nesta auditoria.", selectable=True),
+                answers(item), ft.Divider(), ft.ResponsiveRow(list(fields.values()), spacing=14, run_spacing=14), error_text,
             ], scroll=ft.ScrollMode.AUTO, spacing=12)),
             actions=[ft.TextButton("Cancelar", on_click=lambda _: page.close(dialog)), save_button])
         page.open(dialog)

@@ -83,6 +83,36 @@ class Action:
     source_date: str
     manual: ManualFields = field(default_factory=ManualFields)
     revision: int = 0
+    # Remaining form answers as (question, answer) pairs; only filled answers.
+    details: tuple[tuple[str, str], ...] = ()
+
+
+# Columns already shown as dedicated fields; every other column becomes a detail.
+CORE_KEYS = ("hotel", "data", "pontos_de_melhoria", "carimbo_de_data_hora")
+
+
+def _column_labels(columns: list) -> dict[str, str]:
+    """The form repeats questions ("Comentários:"); make each label unambiguous."""
+    columns = [column for column in columns if isinstance(column, dict)
+               and isinstance(column.get("key"), str) and isinstance(column.get("label"), str)]
+    totals, seen, previous, labels = {}, {}, "", {}
+    for column in columns:
+        totals[column["label"].strip()] = totals.get(column["label"].strip(), 0) + 1
+    for column in columns:
+        label = column["label"].strip()
+        if totals[label] > 1:
+            seen[label] = seen.get(label, 0) + 1
+            if label.casefold().startswith(("comentário", "comentario", "se você", "se voce")):
+                label = f"{previous} — {label}"
+            elif seen[label] > 1:
+                label = f"{label} ({seen[label]})"
+        labels[column["key"]] = previous = label
+    return labels
+
+
+def _details(item: dict, labels: dict[str, str]) -> tuple[tuple[str, str], ...]:
+    return tuple((label, str(item[key]).strip()) for key, label in labels.items()
+                 if key not in CORE_KEYS and item.get(key) is not None and str(item[key]).strip())
 
 
 def actions_from_response(payload: dict, source: str) -> tuple[Action, ...]:
@@ -94,19 +124,19 @@ def actions_from_response(payload: dict, source: str) -> tuple[Action, ...]:
     keys = {column.get("key") for column in payload["columns"] if isinstance(column, dict)}
     if payload["items"] and not set(required) <= keys:
         raise ValueError("O formato da API mudou: faltam campos obrigatórios das auditorias.")
-    actions = {}
+    actions, labels = {}, _column_labels(payload["columns"])
     for item in payload["items"]:
         if not isinstance(item, dict) or any(not isinstance(item.get(key), str) for key in required):
             raise ValueError("A API retornou uma auditoria incompleta.")
-        if not item["pontos_de_melhoria"].strip():
-            continue
+        # Audits without improvement points are kept: they still carry answers and photos.
         # Row numbers are not stable when Sheets rows are inserted or sorted.
         identity = [source, *(item[key].strip() for key in ("carimbo_de_data_hora", "endereco_de_e_mail", "hotel", "data"))]
         if not all(identity):
             raise ValueError("Uma auditoria não possui identificação suficiente para salvar o plano.")
         key = hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
         action = Action(key, item["hotel"].strip(), item["data"].strip(),
-                        item["pontos_de_melhoria"].strip(), item["carimbo_de_data_hora"].strip())
+                        item["pontos_de_melhoria"].strip(), item["carimbo_de_data_hora"].strip(),
+                        details=_details(item, labels))
         if key in actions:
             raise ValueError("A API retornou auditorias com identificação duplicada. Revise a origem.")
         actions[key] = action
@@ -163,6 +193,9 @@ class ActionStore:
                     improvement TEXT NOT NULL, source_date TEXT NOT NULL,
                     manual TEXT NOT NULL DEFAULT '{}', revision INTEGER NOT NULL DEFAULT 0,
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+                # Databases created before the form answers were imported lack this column.
+                if "details" not in {row["name"] for row in connection.execute("PRAGMA table_info(actions)")}:
+                    connection.execute("ALTER TABLE actions ADD COLUMN details TEXT NOT NULL DEFAULT '[]'")
                 yield connection
         finally:
             connection.close()
@@ -171,16 +204,19 @@ class ActionStore:
         with self.connection() as connection:
             for item in actions:
                 # Only source-owned fields change. Manual work is never overwritten.
-                connection.execute("""INSERT INTO actions(id,hotel,inventory_date,improvement,source_date)
-                    VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+                connection.execute("""INSERT INTO actions(id,hotel,inventory_date,improvement,source_date,details)
+                    VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
                     hotel=excluded.hotel, inventory_date=excluded.inventory_date,
-                    improvement=excluded.improvement, source_date=excluded.source_date""",
-                    (item.id, item.hotel, item.inventory_date, item.improvement, item.source_date))
+                    improvement=excluded.improvement, source_date=excluded.source_date,
+                    details=excluded.details""",
+                    (item.id, item.hotel, item.inventory_date, item.improvement, item.source_date,
+                     json.dumps(item.details, ensure_ascii=False)))
 
     def list(self) -> tuple[Action, ...]:
         with self.connection() as connection:
             return tuple(Action(row["id"], row["hotel"], row["inventory_date"], row["improvement"],
-                                row["source_date"], ManualFields(**json.loads(row["manual"])), row["revision"])
+                                row["source_date"], ManualFields(**json.loads(row["manual"])), row["revision"],
+                                tuple((label, value) for label, value in json.loads(row["details"])))
                          for row in connection.execute("SELECT * FROM actions ORDER BY hotel,source_date,id"))
 
     def save(self, action: Action, fields: ManualFields):

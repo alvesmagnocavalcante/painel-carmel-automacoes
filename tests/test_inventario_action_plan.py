@@ -47,7 +47,44 @@ class ActionPlanTests(TestCase):
         self.assertNotEqual(mapped[0].improvement, updated[0].improvement)
         self.assertNotEqual(mapped[0].id, actions_from_response(original, "another source")[0].id)
         original["items"][0]["pontos_de_melhoria"] = " "
-        self.assertEqual(actions_from_response(original, "source"), ())
+        kept = actions_from_response(original, "source")
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0].improvement, "")
+
+    def test_form_answers_are_imported_with_unambiguous_labels_and_persisted(self):
+        data = payload()
+        data["columns"] += [{"key": "fotos", "label": "Fotos"}, {"key": "organizado", "label": "Organizado?"},
+                            {"key": "comentarios", "label": "Comentários:"}, {"key": "organizado_2", "label": "Organizado?"},
+                            {"key": "comentarios_2", "label": "Comentários:"}, {"key": "vazio", "label": "Vazio"}]
+        data["items"][0].update(fotos="https://drive.test/1", organizado="Sim", comentarios="ok",
+                                organizado_2="Não", comentarios_2="ruim", vazio="  ")
+        received = actions_from_response(data, "source")[0]
+        details = dict(received.details)
+        self.assertEqual(details["Fotos"], "https://drive.test/1")
+        self.assertEqual(details["Organizado? — Comentários:"], "ok")
+        self.assertEqual(details["Organizado? (2) — Comentários:"], "ruim")
+        self.assertEqual(details["endereco_de_e_mail"], "auditor@example.test")
+        self.assertNotIn("Vazio", details)
+        with TemporaryDirectory() as folder:
+            store = ActionStore(Path(folder) / "plan.sqlite3")
+            store.sync((received,))
+            self.assertEqual(store.list()[0].details, received.details)
+
+    def test_store_created_before_answers_existed_is_migrated(self):
+        import sqlite3
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / "old.sqlite3"
+            old = sqlite3.connect(path)
+            with old:
+                old.execute("""CREATE TABLE actions (id TEXT PRIMARY KEY, hotel TEXT NOT NULL, inventory_date TEXT NOT NULL,
+                    improvement TEXT NOT NULL, source_date TEXT NOT NULL, manual TEXT NOT NULL DEFAULT '{}',
+                    revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+                old.execute("INSERT INTO actions(id,hotel,inventory_date,improvement,source_date) VALUES('1','H','d','i','s')")
+            old.close()
+            store = ActionStore(path)
+            self.assertEqual(store.list()[0].details, ())
+            store.sync((replace(action(), id="1"),))
+            self.assertTrue(store.list()[0].details)
 
     def test_invalid_or_duplicate_api_response_is_rejected(self):
         for invalid in ({}, {"items": []}, {"columns": [], "items": payload()["items"]}):
@@ -157,7 +194,7 @@ class ActionPlanTests(TestCase):
             self.assertEqual(sheet["L9"].data_type, "f")
             self.assertIn('"Concluída"', sheet["L9"].value)
             self.assertEqual(sheet.freeze_panes, "C9")
-            self.assertEqual(sheet.auto_filter.ref, "A8:M9")
+            self.assertEqual(sheet.auto_filter.ref, "A8:N9")
             self.assertEqual(sheet["C9"].value, item.improvement)
             self.assertEqual(sheet["P1"].value, "=TODAY()")
             self.assertTrue(book.calculation.fullCalcOnLoad)

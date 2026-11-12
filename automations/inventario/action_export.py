@@ -22,11 +22,16 @@ from automations.inventario.export import (
 
 LOGO = Path(__file__).resolve().parents[2] / "portal" / "assets" / "carmel-logo.png"
 HEADERS = ("Hotel", "Data do inventário", "O quê?", "Como?", "Responsável", "Início",
-           "Término", "Novo prazo", "Data realizada", "% concluído", "% planejado", "Status", "Observações")
+           "Término", "Novo prazo", "Data realizada", "% concluído", "% planejado", "Status", "Observações",
+           "Respostas da auditoria")
 COLUMN_WIDTHS = {
     "A": 24, "B": 19, "C": 65, "D": 60, "E": 25, "F": 16, "G": 16, "H": 16,
-    "I": 18, "J": 17, "K": 17, "L": 20, "M": 55, "O": 22, "P": 18,
+    "I": 18, "J": 17, "K": 17, "L": 20, "M": 55, "N": 80, "O": 22, "P": 18,
 }
+
+
+def _answers_text(action) -> str:
+    return "\n".join(f"{label}: {value}" for label, value in action.details)
 
 
 def export_actions_excel(actions) -> bytes:
@@ -37,12 +42,12 @@ def export_actions_excel(actions) -> bytes:
         sheet = book.active
         sheet.title = "Plano de Ação"
         book.calculation = CalcProperties(fullCalcOnLoad=True)
-        sheet.merge_cells("A1:M1")
+        sheet.merge_cells("A1:N1")
         sheet["A1"] = "CARMEL HOTÉIS | PLANO DE AÇÃO - INVENTÁRIO"
         sheet["A1"].font = Font(name="Calibri", size=19, bold=True, color="FFFFFF")
         sheet["A1"].fill = HEADER_FILL
         sheet.row_dimensions[1].height = 36
-        sheet.merge_cells("A2:M2")
+        sheet.merge_cells("A2:N2")
         sheet["A2"] = "Pontos de melhoria da API e preenchimento manual salvo no painel."
         sheet["O1"], sheet["P1"] = "Data de referência", "=TODAY()"
         sheet["P1"].number_format = "dd/mm/yyyy"
@@ -64,7 +69,8 @@ def export_actions_excel(actions) -> bytes:
                 inventory_date = _safe_text(action.inventory_date)
             values = (action.hotel, inventory_date, action.improvement, manual.how, manual.responsible,
                       parse_date(manual.start), parse_date(manual.due), parse_date(manual.revised),
-                      parse_date(manual.completed), manual.progress / 100, None, None, manual.notes)
+                      parse_date(manual.completed), manual.progress / 100, None, None, manual.notes,
+                      _answers_text(action))
             for column, value in enumerate(values, 1):
                 if isinstance(value, str):
                     if len(value) > 32767:
@@ -82,7 +88,8 @@ def export_actions_excel(actions) -> bytes:
             for column in (10, 11):
                 sheet.cell(row, column).number_format = "0%"
             longest = max(len(action.improvement), len(manual.how), len(manual.notes))
-            sheet.row_dimensions[row].height = min(409, max(54, (longest // 65 + 2) * 15))
+            lines = max(longest // 65 + 2, sum(len(line) // 80 + 1 for line in _answers_text(action).split("\n")) + 1)
+            sheet.row_dimensions[row].height = min(409, max(54, lines * 15))
         progress = DataValidation(type="decimal", operator="between", formula1=0, formula2=1)
         progress.error = "Preencha um percentual entre 0% e 100%."
         progress.showErrorMessage = True
@@ -92,7 +99,7 @@ def export_actions_excel(actions) -> bytes:
             sheet.conditional_formatting.add(f"L9:L{last}", FormulaRule(formula=[f'$L9="{status}"'], fill=PatternFill("solid", fgColor=color)))
         apply_column_widths(sheet, COLUMN_WIDTHS)
         sheet.freeze_panes = "C9"
-        sheet.auto_filter.ref = f"A8:M{last}"
+        sheet.auto_filter.ref = f"A8:N{last}"
         sheet.sheet_view.showGridLines = False
         sheet.page_setup.orientation = "landscape"
         sheet.page_setup.paperSize = sheet.PAPERSIZE_A3
@@ -100,7 +107,7 @@ def export_actions_excel(actions) -> bytes:
         sheet.page_setup.fitToHeight = 0
         sheet.sheet_properties.pageSetUpPr.fitToPage = True
         sheet.print_title_rows = "1:8"
-        sheet.print_area = f"A1:M{last}"
+        sheet.print_area = f"A1:N{last}"
         return workbook_bytes(book)
     finally:
         book.close()
@@ -134,7 +141,8 @@ def export_actions_pdf(actions) -> bytes:
         story.append(Paragraph(escape(f"{index:02d} · {action.hotel} | Inventário: {action.inventory_date}"), heading))
         details = [("O quê?", action.improvement), ("Como?", manual.how), ("Responsável", manual.responsible),
                    ("Prazos", f"Início: {manual.start or '—'} | Término: {manual.due or '—'}\nNovo prazo: {manual.revised or '—'} | Realizado: {manual.completed or '—'}"),
-                   ("Andamento", f"{manual.progress}% concluído | {manual.status()}"), ("Observações", manual.notes)]
+                   ("Andamento", f"{manual.progress}% concluído | {manual.status()}"), ("Observações", manual.notes),
+                   *((label, value) for label, value in action.details)]
         table = LongTable([[paragraph(label), paragraph(value)] for label, value in details],
                           colWidths=[30 * mm, 144 * mm], splitInRow=1, hAlign="LEFT")
         table.setStyle(TableStyle([
