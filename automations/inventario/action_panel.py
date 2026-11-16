@@ -5,7 +5,7 @@ import logging
 
 import flet as ft
 
-from automations.inventario.action_export import export_actions_excel, export_actions_pdf
+from automations.inventario.action_export import export_actions_excel, export_actions_pdf, slugify
 from automations.inventario.action_plan import ActionStore, AuditApi, ManualFields, STATUSES, parse_date
 from automations.inventario.view import InventoryView, TABLE_HEIGHT, inventory_header
 from portal.theme import DARK, LIGHT, PRIMARY, panel_text, style_input, surface_card
@@ -30,6 +30,12 @@ def main(page, download_file=None, *, provider=None, store=None):
     month = ft.Dropdown(label="Mês do inventário", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 3})
     status = ft.Dropdown(label="Status", value="Todos", options=[ft.dropdown.Option(value) for value in ("Todos", *STATUSES)], col={"xs": 12, "md": 3})
     search = ft.TextField(label="Pesquisar pontos de melhoria, respostas ou responsável", prefix_icon=ft.Icons.SEARCH, expand=True)
+    # Period by days: an inventory at the start of a month and another at the end
+    # of it must be downloadable separately.
+    period_enabled = ft.Checkbox(label="Filtrar período do inventário", value=False)
+    start_field = ft.TextField(label="Data inicial", hint_text="DD/MM/AAAA", max_length=10, col={"xs": 12, "md": 4})
+    end_field = ft.TextField(label="Data final", hint_text="DD/MM/AAAA", max_length=10, col={"xs": 12, "md": 4})
+    period_controls = ft.ResponsiveRow([start_field, end_field], visible=False, spacing=14, run_spacing=14)
     layout = ft.Column(expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def db():
@@ -54,9 +60,37 @@ def main(page, download_file=None, *, provider=None, store=None):
         except ValueError:
             return "Sem data"
 
+    def period():
+        """(start, end) when the period filter is on, None when off; ValueError when invalid."""
+        if not period_enabled.value:
+            return None
+        try:
+            start, end = parse_date(start_field.value or ""), parse_date(end_field.value or "")
+        except ValueError as error:
+            raise ValueError("Informe as datas no formato DD/MM/AAAA.") from error
+        if start is None or end is None:
+            raise ValueError("Informe a data inicial e a data final do período.")
+        if start > end:
+            raise ValueError("A data inicial deve ser anterior ou igual à data final.")
+        return start, end
+
+    def in_period(item, bounds):
+        if bounds is None:
+            return True
+        try:
+            day = parse_date(item.inventory_date)
+        except ValueError:
+            return False
+        return day is not None and bounds[0] <= day <= bounds[1]
+
     def selected():
         query = (search.value or "").strip().casefold()
+        try:
+            bounds = period()
+        except ValueError:
+            return ()  # never export or show a selection the filter could not apply
         return tuple(item for item in rows if (company.value == "Todos" or company.value == item.hotel)
+            and in_period(item, bounds)
             and (month.value == "Todos" or month.value == month_key(item))
             and (status.value == "Todos" or status.value == item.manual.status())
             and (not query or query in f"{item.hotel} {item.improvement} {item.manual.how} {item.manual.responsible} {' '.join(value for _, value in item.details)}".casefold()))
@@ -82,6 +116,13 @@ def main(page, download_file=None, *, provider=None, store=None):
                 text(label, muted=True, size=12), text(value, selectable=True)], spacing=2, tight=True)
                 for label, value in item.details], spacing=10), padding=ft.padding.only(left=16, right=8, bottom=12))],
             tile_padding=ft.padding.all(0), collapsed_text_color=colors["text"], text_color=colors["text"])
+
+    def pick_date(field):
+        def changed(event):
+            field.value = event.control.value.strftime("%d/%m/%Y")
+            render()
+            page.update()
+        page.open(ft.DatePicker(on_change=changed))
 
     def edit(item):
         colors = palette()
@@ -170,9 +211,21 @@ def main(page, download_file=None, *, provider=None, store=None):
     def render():
         colors = palette()
         items = selected()
-        for control in (company, month, status, search):
+        for control in (company, month, status, search, start_field, end_field):
             control.disabled = busy
             style_input(control, colors)
+        period_enabled.disabled = busy
+        period_enabled.label_style = ft.TextStyle(color=colors["text"])
+        period_enabled.check_color, period_enabled.active_color = "#FFFFFF", PRIMARY
+        period_controls.visible = bool(period_enabled.value)
+        for field in (start_field, end_field):
+            field.suffix = ft.IconButton(ft.Icons.CALENDAR_MONTH, tooltip="Selecionar data", disabled=busy,
+                                         on_click=lambda _, field=field: pick_date(field))
+        try:
+            period()
+            period_error = ""
+        except ValueError as error:
+            period_error = str(error)
         refresh_button.disabled = saved_button.disabled = busy
         for button in (excel_button, pdf_button):
             button.disabled = busy or not items or download_file is None
@@ -205,13 +258,15 @@ def main(page, download_file=None, *, provider=None, store=None):
                             ft.Row([refresh_button, saved_button], wrap=True, spacing=10)],
                            wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.ResponsiveRow([company, month, status], spacing=14, run_spacing=14), search,
-                    text(message, muted=not failed),
+                    period_enabled, period_controls,
+                    text(period_error or message, color=colors["warning"] if period_error else None,
+                         muted=not (failed or period_error)),
                 ], spacing=14)),
                 surface(ft.Column([
                     ft.Row([text("Acompanhamento das ações", bold=True, size=18),
                             ft.Row([excel_button, pdf_button], wrap=True)],
                            wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    text("Use o lápis para preencher. Os downloads incluem os registros filtrados e salvos.", muted=True, size=12), results,
+                    text("Use o lápis para preencher. Os downloads incluem exatamente os registros filtrados, inclusive o período escolhido.", muted=True, size=12), results,
                 ], spacing=14)),
             ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
         ]
@@ -249,8 +304,17 @@ def main(page, download_file=None, *, provider=None, store=None):
         page.update()
         try:
             exporter = export_actions_excel if kind == "xlsx" else export_actions_pdf
-            content = await asyncio.to_thread(exporter, items)
-            page.launch_url(download_file(content, f"plano-acao-inventario.{kind}"), web_window_name="_self")
+            bounds = period()
+            labels, stem = [], ["plano-acao-inventario"]
+            if company.value != "Todos":
+                labels.append(f"Hotel: {company.value}")
+                stem.append(slugify(company.value))
+            if bounds:
+                labels.append(f"Período: {bounds[0]:%d/%m/%Y} a {bounds[1]:%d/%m/%Y}")
+                stem += [f"{bounds[0]:%Y%m%d}", f"{bounds[1]:%Y%m%d}"]
+            content = await asyncio.to_thread(exporter, items, " | ".join(labels))
+            stem = "-".join(stem)
+            page.launch_url(download_file(content, f"{stem}.{kind}"), web_window_name="_self")
         except Exception:
             logging.getLogger(__name__).exception("Falha ao exportar plano de ação")
             failed, message = True, "Não foi possível gerar o arquivo. Confira a instalação das dependências."
@@ -290,5 +354,6 @@ def main(page, download_file=None, *, provider=None, store=None):
     pdf_button = ft.OutlinedButton("Baixar PDF", icon=ft.Icons.PICTURE_AS_PDF_OUTLINED,
         icon_color=palette()["danger"], height=42, style=button_style, on_click=pdf)
     company.on_change = month.on_change = status.on_change = search.on_change = changed
+    period_enabled.on_change = start_field.on_change = end_field.on_change = changed
     render()
     return InventoryView(layout, apply_theme, lambda: False)

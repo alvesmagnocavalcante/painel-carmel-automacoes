@@ -219,6 +219,41 @@ class ActionPlanTests(TestCase):
             self.assertIn("MARCADOR FINAL", " ".join(pages))
             self.assertIn("Texto literal", " ".join(pages))
 
+    def test_period_filter_separates_two_inventories_of_the_same_month(self):
+        data = payload()
+        early = data["items"][0] | {"data": "02/11/2026", "carimbo_de_data_hora": "03/11/2026 10:00:00"}
+        late = data["items"][0] | {"data": "28/11/2026", "carimbo_de_data_hora": "29/11/2026 10:00:00"}
+        data["items"] = [early, late]
+        with TemporaryDirectory() as folder:
+            store = ActionStore(Path(folder) / "actions.sqlite3")
+            source = MagicMock()
+            source.fetch.return_value = actions_from_response(data, "source")
+            page, download = MagicMock(web=True), MagicMock(return_value="/downloads/file")
+            view = main(page, download_file=download, provider=source, store=store)
+            page.update.side_effect = lambda: view.control._build_add_commands()
+            asyncio.run(next(c for c in walk(view.control) if isinstance(c, ft.ElevatedButton)).on_click(None))
+            rows = lambda: len(next(c for c in walk(view.control) if isinstance(c, ft.DataTable)).rows)
+            self.assertEqual(rows(), 2)
+            flag = next(c for c in walk(view.control) if isinstance(c, ft.Checkbox))
+            fields = {c.label: c for c in walk(view.control) if isinstance(c, ft.TextField)}
+            flag.value = True
+            fields["Data inicial"].value, fields["Data final"].value = "01/11/2026", "05/11/2026"
+            flag.on_change(None)
+            self.assertEqual(rows(), 1)
+            button = next(c for c in walk(view.control) if isinstance(c, ft.OutlinedButton) and c.text == "Baixar Excel")
+            asyncio.run(button.on_click(None))
+            self.assertEqual(download.call_args.args[1], "plano-acao-inventario-20261101-20261105.xlsx")
+            sheet = load_workbook(BytesIO(export_actions_excel(
+                store.list()[:1], "Período: 01/11/2026 a 05/11/2026"))).active
+            self.assertIn("Período: 01/11/2026 a 05/11/2026", sheet["A2"].value)
+            fields["Data inicial"].value = "10/11/2026"  # start after end: nothing is shown or exported
+            fields["Data inicial"].on_change(None)
+            self.assertFalse(any(isinstance(c, ft.DataTable) for c in walk(view.control)))
+            self.assertTrue(button.disabled)
+            flag.value = False
+            flag.on_change(None)
+            self.assertEqual(rows(), 2)
+
     def test_ui_http_sync_save_reload_filter_and_both_downloads(self):
         with TemporaryDirectory() as folder:
             store = ActionStore(Path(folder) / "actions.sqlite3")

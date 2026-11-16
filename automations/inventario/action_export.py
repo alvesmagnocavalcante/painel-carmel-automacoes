@@ -1,5 +1,7 @@
 """Create new Excel/PDF downloads from saved action plans; never edit templates."""
 
+import re
+import unicodedata
 from datetime import date
 from io import BytesIO
 from pathlib import Path
@@ -34,7 +36,12 @@ def _answers_text(action) -> str:
     return "\n".join(f"{label}: {value}" for label, value in action.details)
 
 
-def export_actions_excel(actions) -> bytes:
+def slugify(value: str) -> str:
+    plain = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", plain.lower()).strip("-") or "hotel"
+
+
+def export_actions_excel(actions, subtitle: str = "") -> bytes:
     if not actions:
         raise ValueError("Não existem ações na seleção para exportar.")
     book = Workbook()
@@ -48,7 +55,8 @@ def export_actions_excel(actions) -> bytes:
         sheet["A1"].fill = HEADER_FILL
         sheet.row_dimensions[1].height = 36
         sheet.merge_cells("A2:N2")
-        sheet["A2"] = "Pontos de melhoria da API e preenchimento manual salvo no painel."
+        sheet["A2"] = ("Pontos de melhoria da API e preenchimento manual salvo no painel."
+                       + (f" {_safe_text(subtitle)}" if subtitle else ""))
         sheet["O1"], sheet["P1"] = "Data de referência", "=TODAY()"
         sheet["P1"].number_format = "dd/mm/yyyy"
         last = 8 + len(actions)
@@ -113,7 +121,7 @@ def export_actions_excel(actions) -> bytes:
         book.close()
 
 
-def export_actions_pdf(actions) -> bytes:
+def export_actions_pdf(actions, subtitle: str = "") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.pagesizes import A4
@@ -131,7 +139,8 @@ def export_actions_pdf(actions) -> bytes:
                              leading=16, textColor=colors.HexColor("#4C3427"), spaceBefore=14, keepWithNext=True)
     paragraph = lambda value: Paragraph(escape(str(value or "Não informado")).replace("\n", "<br/>"), body)
     story = [Paragraph("Plano de ação - Inventário", styles["Title"]),
-             paragraph(f"Carmel Hotéis | Emitido em {date.today():%d/%m/%Y} | {len(actions)} registros"), Spacer(1, 5 * mm)]
+             paragraph(f"Carmel Hotéis | Emitido em {date.today():%d/%m/%Y} | {len(actions)} registros"
+                       + (f" | {subtitle}" if subtitle else "")), Spacer(1, 5 * mm)]
     if LOGO.is_file():
         logo = Image(str(LOGO), width=40 * mm, height=17 * mm, kind="proportional")
         logo.hAlign = "LEFT"

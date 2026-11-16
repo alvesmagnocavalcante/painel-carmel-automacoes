@@ -6,7 +6,6 @@ from automations.bordero.panel import main as build_bordero
 from automations.inventario.panel import main as build_inventory
 from automations.inventario.financial_panel import main as build_financial_inventory
 from automations.inventario.action_panel import main as build_action_plan
-from automations.inventario.report_panel import main as build_inventory_report
 from automations.cartoes_credito.panel import main as build_cards
 from automations.cartao_flash.panel import main as build_flash
 from automations.dda.panel import main as build_dda
@@ -135,7 +134,6 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         inventory.apply_theme(is_dark)
         financial_inventory.apply_theme(is_dark)
         action_plan.apply_theme(is_dark)
-        inventory_report.apply_theme(is_dark)
         cards.apply_theme(is_dark)
         flash_panel.apply_theme(is_dark)
         dda_panel.apply_theme(is_dark)
@@ -153,7 +151,6 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
     financial_inventory = build_financial_inventory(page, download_file=attachment_download,
         available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
     action_plan = build_action_plan(page, download_file=attachment_download)
-    inventory_report = build_inventory_report(page, download_file=attachment_download)
     cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
     flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir,
                               available_width=lambda: page.width - sidebar.width - 40
@@ -166,7 +163,6 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         "/bordero": bordero.control,
         "/inventario": inventory.control,
         "/inventario/financeiro": financial_inventory.control,
-        "/inventario/relatorio": inventory_report.control,
         "/inventario/plano-acao": action_plan.control,
         "/cartoes": cards.control,
         "/flash": flash_panel.control,
