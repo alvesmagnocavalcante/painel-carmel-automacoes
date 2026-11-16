@@ -5,6 +5,7 @@ Projeto isolado contendo exclusivamente o **Portal Web (Flet + FastAPI)** e seus
 - **Inventário (`/inventario`)**:
   - Contagem mensal por empresa e almoxarifado (`/inventario`)
   - Impacto financeiro mensal (`/inventario/financeiro`)
+  - Relatório por hotel, por período de dias, com contagem e impacto financeiro e download em Excel e PDF (`/inventario/relatorio`)
   - Plano de ação integrado à API de auditoria com persistência SQLite e exportação Excel e PDF (`/inventario/plano-acao`)
 - **Cartões de crédito (`/cartoes`)**: Conferência de faturas XLSX contra lançamentos CMFlex, persistência SQLite das conciliações e encargos, e exportação de conciliação.
 - **Cartão Flash (`/flash`)**: Conciliação de despesas corporativas Flash contra `cmflex.historico_cartao_flash`, identificação automática de `PENDENTE DE LANÇAMENTO`, `PENDENTE DE PRESTAÇÃO` e `PRESTADO CONTAS`, visualização de comprovantes fiscais em PDF e geração de planilha Excel e texto de cobrança para e-mail.

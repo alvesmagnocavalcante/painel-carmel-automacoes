@@ -17,11 +17,12 @@ class InventoryView:
     resize: Callable[[], bool]
 
 
-def inventory_navigation(page, colors, *, financial=False, action_plan=False):
+def inventory_navigation(page, colors, *, financial=False, action_plan=False, report=False):
     buttons = []
     for label, icon, route, active in (
-        ("Contagem de itens", ft.Icons.INVENTORY_2_OUTLINED, "/inventario", not financial and not action_plan),
+        ("Contagem de itens", ft.Icons.INVENTORY_2_OUTLINED, "/inventario", not (financial or action_plan or report)),
         ("Impacto financeiro", ft.Icons.ACCOUNT_BALANCE_OUTLINED, "/inventario/financeiro", financial),
+        ("Relatório por hotel", ft.Icons.DESCRIPTION_OUTLINED, "/inventario/relatorio", report),
         ("Plano de ação", ft.Icons.CHECKLIST_OUTLINED, "/inventario/plano-acao", action_plan),
     ):
         buttons.append(ft.TextButton(
@@ -50,13 +51,14 @@ def inventory_header(
     *,
     financial: bool = False,
     action_plan: bool = False,
+    report: bool = False,
 ) -> ft.Container:
     return ft.Container(
         ft.Column([
             ft.Text(category, size=11, weight=ft.FontWeight.W_600, color=colors["accent"]),
             ft.Text(title, size=24, weight=ft.FontWeight.W_600, color=colors["text"]),
             ft.Text(subtitle, size=13, color=colors["muted"]),
-            inventory_navigation(page, colors, financial=financial, action_plan=action_plan),
+            inventory_navigation(page, colors, financial=financial, action_plan=action_plan, report=report),
         ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         padding=ft.padding.symmetric(horizontal=24, vertical=16),
         bgcolor=colors["surface"],

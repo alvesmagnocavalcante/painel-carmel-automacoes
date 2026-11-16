@@ -190,7 +190,7 @@ class FinancialTests(TestCase):
                 view.apply_theme(is_dark)
                 header, body = view.control.controls
                 tabs = [item for item in walk(header) if isinstance(item, ft.TextButton)]
-                self.assertEqual([tab.text for tab in tabs], ["Contagem de itens", "Impacto financeiro", "Plano de ação"])
+                self.assertEqual([tab.text for tab in tabs], ["Contagem de itens", "Impacto financeiro", "Relatório por hotel", "Plano de ação"])
                 self.assertEqual(tabs[1 if financial else 0].style.bgcolor, palette["soft"])
                 self.assertFalse(any(isinstance(item, ft.TextButton) and item.text == "Impacto financeiro"
                                      for item in walk(body)))

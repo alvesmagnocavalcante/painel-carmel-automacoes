@@ -11,6 +11,7 @@ from psycopg.rows import dict_row
 
 from automations.inventario.data import InventoryCount, months_between
 from automations.inventario.financial import FinancialInventory, validate_financial_rows
+from automations.inventario.report import ReportRow, validate_period, validate_report_rows
 
 
 QUERY = """
@@ -75,6 +76,53 @@ class SqlInventoryProvider:
                                     str(item["almox"] or "Não informado"),
                                     int(item["itens_contados"]), int(item["itens_com_diferenca"]))
                      for item in records)
+
+
+# Daily counts for the report. Loss and surplus use the same source columns as
+# v_inventario_resumo_mensal; stock is that view's rule (last snapshot of the month).
+REPORT_QUERY = """
+WITH fisico AS (
+    SELECT dtdata::date AS dia, idempresa, empresa, fkalmoxarifado, almox,
+           COUNT(DISTINCT fkartigo) AS contados,
+           COUNT(*) FILTER (WHERE dif <> 0) AS diferentes,
+           COALESCE(SUM(valorfalta), 0) AS perda,
+           COALESCE(SUM(valorsobra), 0) AS sobra
+    FROM cmflex.inventario_fisico
+    WHERE dtdata IS NOT NULL AND dtdata >= %s AND dtdata < %s
+    GROUP BY dtdata::date, idempresa, empresa, fkalmoxarifado, almox
+), ultimas AS (
+    SELECT date_trunc('month', dataref)::date AS mes, fkempresa, fkalmoxarifado, MAX(dataref) AS ultima
+    FROM cmflex.inventario_fisico_financeiro
+    GROUP BY 1, 2, 3
+), estoque AS (
+    SELECT u.mes, f.fkempresa, f.fkalmoxarifado, SUM(f.valor) AS valor
+    FROM cmflex.inventario_fisico_financeiro f
+    JOIN ultimas u ON f.dataref = u.ultima AND f.fkempresa = u.fkempresa
+                  AND f.fkalmoxarifado = u.fkalmoxarifado
+    GROUP BY u.mes, f.fkempresa, f.fkalmoxarifado
+)
+SELECT fi.dia, fi.empresa, fi.almox, fi.contados, fi.diferentes,
+       ROUND(fi.perda, 2) AS perda, ROUND(fi.sobra, 2) AS sobra,
+       ROUND(COALESCE(e.valor, 0), 2) AS estoque
+FROM fisico fi
+LEFT JOIN estoque e ON e.mes = date_trunc('month', fi.dia)::date
+                   AND e.fkempresa = fi.idempresa AND e.fkalmoxarifado = fi.fkalmoxarifado
+ORDER BY fi.dia, fi.empresa, fi.almox
+"""
+
+
+class SqlInventoryReportProvider:
+    def fetch(self, start: date, end: date) -> tuple[ReportRow, ...]:
+        validate_period(start, end)
+        records = _query_records(REPORT_QUERY, (start, end + timedelta(days=1)),
+            error_message="Não foi possível consultar o relatório do inventário. Tente novamente.")
+        return validate_report_rows(tuple(ReportRow(
+            day=item["dia"], company=str(item["empresa"] or "Não informada"),
+            warehouse=str(item["almox"] or "Não informado"),
+            counted=int(item["contados"]), different=int(item["diferentes"]),
+            loss=Decimal(item["perda"]), surplus=Decimal(item["sobra"]),
+            stock=Decimal(item["estoque"]),
+        ) for item in records))
 
 
 # The view now exposes the company. Keep financial business rules in the DB.
