@@ -12,11 +12,11 @@ from automations.inventario.data import month_label
 from automations.inventario.database import SqlFinancialInventoryProvider
 from automations.inventario.financial import currency, financial_totals, percentage
 from automations.inventario.financial_export import export_financial
-from automations.inventario.view import InventoryView, TABLE_HEIGHT, inventory_header
+from automations.inventario.view import InventoryView, empty_state, inventory_header, table_height
 from portal.theme import DARK, LIGHT, PRIMARY, metric_card, panel_text, style_input, surface_card
 
 
-def impact_chart(rows, colors):
+def impact_chart(rows, colors, min_width=0):
     """Compare companies or warehouses; never average percentages."""
     single = len({item.company for item in rows}) == 1
     groups = {}
@@ -32,7 +32,7 @@ def impact_chart(rows, colors):
     values = values[:8]
     if not values:
         return ft.Container(ft.Text("Sem contagem com base financeira para comparar.", color=colors["muted"]),
-                            height=280, alignment=ft.alignment.center)
+                            height=110, alignment=ft.alignment.center)
     maximum = max(1, ceil(float(max(item[3] for item in values)) * 1.2))
     rods, labels, tops = [], [], []
     for index, (name, stock, difference, percent) in enumerate(values):
@@ -53,7 +53,7 @@ def impact_chart(rows, colors):
         tops.append(ft.ChartAxisLabel(value=index, label=ft.Text(formatted, color=colors["warning"],
             size=13, weight=ft.FontWeight.W_600, text_align=ft.TextAlign.CENTER)))
     chart = ft.BarChart(bar_groups=rods, min_y=0, max_y=maximum, height=330,
-        width=max(650, len(values) * 180 + 96), interactive=True,
+        width=max(650, len(values) * 180 + 96, int(min_width)), interactive=True,
         bottom_axis=ft.ChartAxis(labels=labels, labels_size=90),
         top_axis=ft.ChartAxis(labels=tops, labels_size=30),
         left_axis=ft.ChartAxis(labels=[ft.ChartAxisLabel(value=maximum * i / 4,
@@ -71,8 +71,8 @@ def main(page, download_file=None, *, provider=None, available_width=None):
     rows, dark, busy = (), True, False
     message, failed = "Consulte o banco para carregar os meses disponíveis.", False
     table_body = None
-    company = ft.Dropdown(label="Empresa", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 4})
-    month = ft.Dropdown(label="Mês de referência", options=[], col={"xs": 12, "md": 4})
+    company = ft.Dropdown(label="Empresa", value="Todos", options=[ft.dropdown.Option("Todos")], expand=True, col={"xs": 12, "md": 4})
+    month = ft.Dropdown(label="Mês de referência", options=[], expand=True, col={"xs": 12, "md": 4})
     layout = ft.Column(expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def colors():
@@ -88,6 +88,10 @@ def main(page, download_file=None, *, provider=None, available_width=None):
         return tuple(item for item in rows if item.month.isoformat() == month.value
                      and (company.value == "Todos" or item.company == company.value))
 
+    def chart_width():
+        available = available_width() if available_width else page.width
+        return available if isinstance(available, (int, float)) else 0
+
     def width():
         available = available_width() if available_width else page.width
         return max(1280, available if isinstance(available, (int, float)) else 0)
@@ -99,7 +103,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
         table_body.width = table_body.controls[0].width = new_width
         return True
 
-    def table(items):
+    def table(items, height):
         nonlocal table_body
         palette = colors()
         labels = ("Empresa", "Almoxarifado", "Estoque financeiro", "Perdas", "Sobras",
@@ -118,9 +122,9 @@ def main(page, download_file=None, *, provider=None, available_width=None):
             for index, label in enumerate(labels)], rows=data_rows, width=width(),
             heading_row_color=palette["table"], heading_row_height=56,
             data_row_min_height=52, data_row_max_height=64, column_spacing=14)
-        table_body = ft.Column([data_table], width=width(), height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS,
+        table_body = ft.Column([data_table], width=width(), height=height, scroll=ft.ScrollMode.ALWAYS,
                                horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-        return ft.Row([table_body], height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS,
+        return ft.Row([table_body], height=height, scroll=ft.ScrollMode.ALWAYS,
                       vertical_alignment=ft.CrossAxisAlignment.START)
 
     def render():
@@ -141,8 +145,9 @@ def main(page, download_file=None, *, provider=None, available_width=None):
             metric_card("Diferença financeira", currency(difference), ft.Icons.WARNING_AMBER_ROUNDED, "warning", palette, col=col),
             metric_card("Impacto sobre o estoque contado", percentage(fraction), ft.Icons.PERCENT, "money", palette, col=col),
         ]
-        results = table(items) if items else ft.Container(text("Nenhum resultado para a seleção.", muted=True),
-            height=TABLE_HEIGHT, alignment=ft.alignment.center)
+        month_rows = sum(item.month.isoformat() == month.value for item in rows)
+        results = table(items, table_height(page, month_rows)) if items else empty_state(
+            text("Nenhum resultado para a seleção.", muted=True))
         layout.controls = [
             inventory_header(
                 page,
@@ -162,7 +167,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
                     text("Impacto financeiro por almoxarifado" if len({item.company for item in items}) == 1
                          else "Impacto financeiro por empresa", bold=True, size=18),
                     text("Até 8 maiores percentuais. Valores acima das colunas; detalhes ao passar o mouse.", muted=True, size=12),
-                    impact_chart(items, palette),
+                    impact_chart(items, palette, chart_width()),
                 ], spacing=12)),
                 surface(ft.Column([
                     ft.Row([text("Resumo financeiro mensal", bold=True, size=18), export],
@@ -171,7 +176,7 @@ def main(page, download_file=None, *, provider=None, available_width=None):
                     text("Almoxarifados sem contagem ficam fora dos totais e do gráfico.", muted=True, size=12),
                     results,
                 ], spacing=14, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
-            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
         ]
 
     async def load(_):

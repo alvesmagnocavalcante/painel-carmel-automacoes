@@ -12,6 +12,7 @@ import psycopg
 from openpyxl import load_workbook
 
 from automations.inventario.data import InventoryCount, build_matrix, months_between
+from automations.inventario.view import EMPTY_HEIGHT
 from automations.inventario.database import SqlInventoryProvider, connection_settings
 from automations.inventario.export import export_inventory
 from automations.inventario.panel import main
@@ -91,22 +92,25 @@ class InventoryTests(TestCase):
         page, provider = MagicMock(web=True, width=1600), MagicMock()
         provider.fetch.return_value = counts()
         view = main(page, provider=provider)
-        self.assertTrue(any(isinstance(item, ft.Container) and item.height == 420 for item in walk(view.control)))
+        self.assertTrue(any(isinstance(item, ft.Container) and item.height == EMPTY_HEIGHT for item in walk(view.control)))
         fields = month_fields(view)
         fields[0].value, fields[1].value = "01/2026", "02/2026"
         consult = next(item for item in walk(view.control) if isinstance(item, ft.ElevatedButton))
         asyncio.run(consult.on_click(None))
         company = next(item for item in walk(view.control) if isinstance(item, ft.Dropdown))
+        heights = set()
         for value in ("Todos", "CHARME", "TAÍBA"):
             company.value = value
             company.on_change(None)
             vertical = next(item for item in walk(view.control) if isinstance(item, ft.Column) and item.controls and isinstance(item.controls[0], ft.DataTable))
-            self.assertEqual(vertical.height, 420)
+            heights.add(vertical.height)
+            self.assertGreaterEqual(vertical.height, EMPTY_HEIGHT)
             self.assertEqual(vertical.controls[0].data_row_min_height, 52)
             self.assertEqual(vertical.controls[0].data_row_max_height, 64)
             labels = [item.value for item in walk(view.control) if isinstance(item, ft.Text)]
             self.assertIn("Diferenças por empresa" if value == "Todos" else "Diferenças por almoxarifado", labels)
             self.assertTrue(view.control._build_add_commands())
+        self.assertEqual(len(heights), 1)  # the page must not jump when the filter changes
         provider.fetch.assert_called_once()
 
     def test_results_fill_width_and_keep_scroll_for_wide_periods(self):

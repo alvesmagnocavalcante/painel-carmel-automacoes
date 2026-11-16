@@ -124,6 +124,7 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
         navigation()
         inventory.resize()
         financial_inventory.resize()
+        action_plan.resize()
         flash_panel.resize()
         dda_panel.resize()
         page.update()
@@ -150,13 +151,14 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
                                  if isinstance(page.width, (int, float)) else None)
     financial_inventory = build_financial_inventory(page, download_file=attachment_download,
         available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
-    action_plan = build_action_plan(page, download_file=attachment_download)
+    action_plan = build_action_plan(page, download_file=attachment_download,
+        available_width=lambda: page.width - sidebar.width - 90 if isinstance(page.width, (int, float)) else None)
     cards = build_cards(page, download_file=attachment_download, upload_dir=card_upload_dir)
     flash_panel = build_flash(page, download_file=attachment_download, upload_dir=card_upload_dir,
-                              available_width=lambda: page.width - sidebar.width - 40
+                              available_width=lambda: page.width - sidebar.width - 48
                               if isinstance(page.width, (int, float)) else None)
     dda_panel = build_dda(page, download_file=attachment_download, upload_dir=card_upload_dir,
-                          available_width=lambda: page.width - sidebar.width - 40
+                          available_width=lambda: page.width - sidebar.width - 48
                           if isinstance(page.width, (int, float)) else None)
 
     panels = {
@@ -187,9 +189,10 @@ def main(page, web_download, attachment_download=None, card_upload_dir=None):
             return
         inventory_changed = inventory.resize()
         financial_changed = financial_inventory.resize()
+        action_changed = action_plan.resize()
         flash_changed = flash_panel.resize() if hasattr(flash_panel, "resize") else False
         dda_changed = dda_panel.resize() if hasattr(dda_panel, "resize") else False
-        if inventory_changed or financial_changed or flash_changed or dda_changed:
+        if inventory_changed or financial_changed or action_changed or flash_changed or dda_changed:
             page.update()
 
     page.on_resized = resized

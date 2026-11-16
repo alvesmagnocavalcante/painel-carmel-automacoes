@@ -7,7 +7,7 @@ import flet as ft
 
 from automations.inventario.action_export import export_actions_excel, export_actions_pdf, slugify
 from automations.inventario.action_plan import ActionStore, AuditApi, ManualFields, STATUSES, parse_date
-from automations.inventario.view import InventoryView, TABLE_HEIGHT, inventory_header
+from automations.inventario.view import InventoryView, empty_state, inventory_header, table_height
 from portal.theme import DARK, LIGHT, PRIMARY, panel_text, style_input, surface_card
 
 STATUS_SEMANTIC = {
@@ -19,16 +19,16 @@ STATUS_SEMANTIC = {
 }
 
 
-def main(page, download_file=None, *, provider=None, store=None):
+def main(page, download_file=None, *, provider=None, store=None, available_width=None):
     if not page.web:
         raise RuntimeError("O plano de ação funciona apenas no navegador.")
     source = provider if provider is not None else AuditApi()
     storage = store
     rows, dark, busy = (), True, False
     message, failed = "Atualize pela API ou carregue os registros já salvos neste servidor.", False
-    company = ft.Dropdown(label="Hotel", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 4})
-    month = ft.Dropdown(label="Mês do inventário", value="Todos", options=[ft.dropdown.Option("Todos")], col={"xs": 12, "md": 3})
-    status = ft.Dropdown(label="Status", value="Todos", options=[ft.dropdown.Option(value) for value in ("Todos", *STATUSES)], col={"xs": 12, "md": 3})
+    company = ft.Dropdown(label="Hotel", value="Todos", options=[ft.dropdown.Option("Todos")], expand=True, col={"xs": 12, "md": 4})
+    month = ft.Dropdown(label="Mês do inventário", value="Todos", options=[ft.dropdown.Option("Todos")], expand=True, col={"xs": 12, "md": 4})
+    status = ft.Dropdown(label="Status", value="Todos", options=[ft.dropdown.Option(value) for value in ("Todos", *STATUSES)], expand=True, col={"xs": 12, "md": 4})
     search = ft.TextField(label="Pesquisar pontos de melhoria, respostas ou responsável", prefix_icon=ft.Icons.SEARCH, expand=True)
     # Period by days: an inventory at the start of a month and another at the end
     # of it must be downloadable separately.
@@ -37,6 +37,7 @@ def main(page, download_file=None, *, provider=None, store=None):
     end_field = ft.TextField(label="Data final", hint_text="DD/MM/AAAA", max_length=10, col={"xs": 12, "md": 4})
     period_controls = ft.ResponsiveRow([start_field, end_field], visible=False, spacing=14, run_spacing=14)
     layout = ft.Column(expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+    rendered_width = 0
 
     def db():
         nonlocal storage
@@ -179,8 +180,18 @@ def main(page, download_file=None, *, provider=None, store=None):
             actions=[ft.TextButton("Cancelar", on_click=lambda _: page.close(dialog)), save_button])
         page.open(dialog)
 
-    def table(items):
+    def table_width():
+        available = available_width() if available_width is not None else None
+        return int(available) if isinstance(available, (int, float)) and available > 0 else 1300
+
+    def text_widths():
+        """Fixed columns stay compact; the two long-text columns share what is left."""
+        flexible = max(380, table_width() - 820)
+        return {2: int(flexible * 0.6), 3: int(flexible * 0.4)}
+
+    def table(items, height):
         colors = palette()
+        flexible = text_widths()
         headers = ("Hotel", "Inventário", "O quê?", "Como?", "Responsável", "Término", "% concluído", "Status", "Editar")
         data_rows = []
         for item in items:
@@ -196,7 +207,7 @@ def main(page, download_file=None, *, provider=None, store=None):
                         bgcolor=colors[f"{semantic}_soft"] if semantic != "muted" else colors["soft"],
                         padding=ft.padding.symmetric(horizontal=12, vertical=7), border_radius=20)))
                     continue
-                width = 300 if index in (2, 3) else 155 if index in (0, 4) else 110
+                width = flexible.get(index) or (120 if index in (0, 4) else 90 if index == 6 else 100)
                 cells.append(ft.DataCell(ft.Container(text(value or "—", max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
                                                      width=width, tooltip=value or None)))
             cells.append(ft.DataCell(ft.IconButton(ft.Icons.EDIT_OUTLINED, tooltip="Preencher ação",
@@ -204,11 +215,13 @@ def main(page, download_file=None, *, provider=None, store=None):
             data_rows.append(ft.DataRow(cells=cells))
         grid = ft.DataTable(columns=[ft.DataColumn(text(label, bold=True)) for label in headers], rows=data_rows,
                             heading_row_color=colors["table"], data_row_min_height=72, data_row_max_height=86,
-                            heading_row_height=50, column_spacing=12)
-        return ft.Row([ft.Column([grid], height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS)],
-                      height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS, vertical_alignment=ft.CrossAxisAlignment.START)
+                            heading_row_height=50, column_spacing=10, horizontal_margin=12)
+        return ft.Row([ft.Column([grid], height=height, scroll=ft.ScrollMode.ALWAYS)],
+                      height=height, scroll=ft.ScrollMode.ALWAYS, vertical_alignment=ft.CrossAxisAlignment.START)
 
     def render():
+        nonlocal rendered_width
+        rendered_width = table_width()
         colors = palette()
         items = selected()
         for control in (company, month, status, search, start_field, end_field):
@@ -240,8 +253,8 @@ def main(page, download_file=None, *, provider=None, store=None):
             ], spacing=2, tight=True), colors, radius=12, padding=12), col={"xs": 6, "md": 4, "xl": 2})
             for label, value in (("Total de ações", len(items)), *counts.items())
         ]
-        results = table(items) if items else ft.Container(text("Nenhum plano de ação na seleção.", muted=True),
-                                                          height=TABLE_HEIGHT, alignment=ft.alignment.center)
+        results = table(items, table_height(page, len(rows), row_height=80)) if items else empty_state(
+            text("Nenhum plano de ação na seleção.", muted=True))
         layout.controls = [
             inventory_header(
                 page,
@@ -268,7 +281,7 @@ def main(page, download_file=None, *, provider=None, store=None):
                            wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     text("Use o lápis para preencher. Os downloads incluem exatamente os registros filtrados, inclusive o período escolhido.", muted=True, size=12), results,
                 ], spacing=14)),
-            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
         ]
 
     async def load(from_api):
@@ -356,4 +369,10 @@ def main(page, download_file=None, *, provider=None, store=None):
     company.on_change = month.on_change = status.on_change = search.on_change = changed
     period_enabled.on_change = start_field.on_change = end_field.on_change = changed
     render()
-    return InventoryView(layout, apply_theme, lambda: False)
+    def resize():
+        if rendered_width == table_width():
+            return False
+        render()
+        return True
+
+    return InventoryView(layout, apply_theme, resize)

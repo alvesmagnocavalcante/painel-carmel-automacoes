@@ -12,7 +12,7 @@ from automations.inventario.charts import company_chart
 from automations.inventario.data import build_matrix, month_label, months_between
 from automations.inventario.database import SqlInventoryProvider
 from automations.inventario.export import export_inventory
-from automations.inventario.view import InventoryView, TABLE_HEIGHT, inventory_header
+from automations.inventario.view import InventoryView, empty_state, inventory_header, table_height
 from portal.theme import DARK, LIGHT, PRIMARY, metric_card, panel_text, style_input, surface_card
 
 
@@ -41,7 +41,7 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
     period_controls = ft.ResponsiveRow([start_field, end_field], visible=False, spacing=14, run_spacing=14)
     snapshot_all = False
     company_field = ft.Dropdown(label="Empresa", value="Todos", options=[ft.dropdown.Option("Todos")],
-                                col={"xs": 12, "md": 3})
+                                expand=True, col={"xs": 12, "md": 3})
     layout = ft.Column(expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def palette():
@@ -70,7 +70,7 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
         table_body.width = table_body.controls[0].width = width
         return True
 
-    def table(selected, months):
+    def table(selected, months, height):
         nonlocal table_body, table_months
         colors = palette()
         lines = build_matrix(selected, months)
@@ -98,9 +98,9 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
                                   data_row_min_height=52, data_row_max_height=64,
                                   width=table_width(len(months)))
         table_months = len(months)
-        table_body = ft.Column([data_table], height=TABLE_HEIGHT, width=data_table.width,
+        table_body = ft.Column([data_table], height=height, width=data_table.width,
                                scroll=ft.ScrollMode.ALWAYS, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-        return ft.Row([table_body], height=TABLE_HEIGHT, scroll=ft.ScrollMode.ALWAYS,
+        return ft.Row([table_body], height=height, scroll=ft.ScrollMode.ALWAYS,
                       vertical_alignment=ft.CrossAxisAlignment.START)
 
     def render():
@@ -121,6 +121,7 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
         download_button.disabled = busy or not selected or snapshot is None or download_file is None
         download_button.icon_color = colors["success"]
         single_company = len({item.company for item in selected}) == 1
+        has_chart = any(item.counted for item in selected)
         total_counted = sum(item.counted for item in selected)
         total_different = sum(item.different for item in selected)
         percent = Decimal(total_different) / Decimal(total_counted) if total_counted else None
@@ -130,9 +131,9 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
             metric_card("Com diferença", str(total_different), ft.Icons.WARNING_AMBER_ROUNDED, "warning", colors, col=col, value_size=23),
             metric_card("Percentual de diferença", _percentage(percent), ft.Icons.PERCENT, "money", colors, col=col, value_size=23),
         ], spacing=10, run_spacing=10)
-        results = table(selected, months_between(*snapshot)) if selected and snapshot else ft.Container(
-            text("Nenhum inventário no período e empresa selecionados." if snapshot else "Os resultados da consulta aparecerão aqui.", muted=True),
-            padding=28, height=TABLE_HEIGHT, alignment=ft.alignment.center)
+        months = months_between(*snapshot) if snapshot else ()
+        results = table(selected, months, table_height(page, len(build_matrix(rows, months)))) if selected and snapshot else empty_state(
+            text("Nenhum inventário no período e empresa selecionados." if snapshot else "Os resultados da consulta aparecerão aqui.", muted=True))
         period = (f"Todos os meses disponíveis • {month_label(snapshot[0])} a {month_label(snapshot[1])}"
                   if snapshot and snapshot_all else f"{snapshot[0]:%d/%m/%Y} a {snapshot[1]:%d/%m/%Y}" if snapshot else "Nenhuma consulta realizada")
         layout.controls = [
@@ -158,14 +159,15 @@ def main(page, download_file=None, *, provider=None, available_width=None) -> In
                          if single_company else "Percentual ponderado no período consultado. Passe o mouse nas barras para ver os valores.",
                          muted=True, size=12),
                     company_chart(selected, colors),
-                ], spacing=10, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), height=330),
+                ], spacing=10, expand=has_chart, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+                    height=330 if has_chart else None),
                 surface(ft.Column([
                     ft.Row([ft.Column([text("Inventário mensal", bold=True, size=18), text(period, muted=True)], spacing=3), download_button],
                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
                     text("Totais somam os almoxarifados. — indica ausência de dados; zero indica uma contagem sem diferença.", muted=True, size=12),
                     results,
                 ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
-            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=20, expand=True),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.STRETCH), padding=24, expand=True),
         ]
 
     async def consult(_):

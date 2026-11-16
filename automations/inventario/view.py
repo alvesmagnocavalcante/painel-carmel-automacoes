@@ -7,7 +7,24 @@ import flet as ft
 
 from portal.theme import panel_text
 
-TABLE_HEIGHT = 420
+TABLE_HEIGHT = 420  # smallest scroll window used when the screen is short
+EMPTY_HEIGHT = 150  # compact placeholder; never reserve a full table's height for nothing
+
+
+def table_height(page, rows: int, row_height: int = 60, header: int = 56) -> int:
+    """Fit a table to its rows and to the screen.
+
+    Sized from the loaded data, not from the active filter, so the page does not
+    jump when a filter changes. Scrolls inside the table only when it is taller
+    than the screen allows.
+    """
+    available = page.height if isinstance(page.height, (int, float)) and page.height else 900
+    ceiling = max(TABLE_HEIGHT, int(available) - 300)
+    return max(EMPTY_HEIGHT, min(ceiling, header + rows * row_height + 16))
+
+
+def empty_state(content: ft.Control) -> ft.Container:
+    return ft.Container(content, height=EMPTY_HEIGHT, alignment=ft.alignment.center, padding=ft.padding.all(16))
 
 
 @dataclass(frozen=True)

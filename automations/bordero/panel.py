@@ -478,7 +478,7 @@ def main(
     theme_button.on_click = toggle_theme
     layout = ft.Column([
         header,
-        ft.Container(content=ft.Column([filters, metrics, results], spacing=14, scroll=ft.ScrollMode.AUTO), padding=20, expand=True),
+        ft.Container(content=ft.Column([filters, metrics, results], spacing=14, scroll=ft.ScrollMode.AUTO), padding=24, expand=True),
     ], expand=True, spacing=0)
     if not embedded:
         page.add(*layout.controls)

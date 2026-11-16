@@ -124,7 +124,7 @@ def main(page: ft.Page, download_file=None, *, provider=None, upload_dir: str | 
             header,
             ft.Container(ft.Column([search_options, bank.control], spacing=12,
                                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
-                         padding=20, expand=True),
+                         padding=24, expand=True),
         ]
         bank.render()
         page.update()

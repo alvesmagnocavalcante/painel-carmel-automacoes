@@ -79,7 +79,7 @@ def main(
     filter_responsible_val = "Todos"
     search_query = ""
 
-    content_area = ft.Container(padding=20)
+    content_area = ft.Container(padding=24)
     layout = ft.Column(
         expand=True,
         spacing=0,

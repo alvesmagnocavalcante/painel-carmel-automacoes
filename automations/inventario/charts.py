@@ -52,7 +52,7 @@ def company_chart(rows: tuple[InventoryCount, ...], colors: dict[str, str]) -> f
     if not companies:
         return ft.Container(ft.Text("Consulte um período com contagens para visualizar o gráfico.",
                                     color=colors["muted"], text_align=ft.TextAlign.CENTER),
-                            alignment=ft.alignment.center, expand=True)
+                            alignment=ft.alignment.center, height=90)
     if len(totals) == 1:
         return _warehouse_chart(rows, colors)
     maximum = min(100, max(10, ceil(float(companies[0][3]) / 10) * 10))

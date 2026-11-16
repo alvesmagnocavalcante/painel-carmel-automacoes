@@ -79,7 +79,7 @@ def main(
     # The portal body is already expanded by its parent Row. Keeping another
     # expanded Container/Column pair here makes Flet calculate a zero-height
     # content area in the web client, leaving only the header visible.
-    content_area = ft.Container(padding=20)
+    content_area = ft.Container(padding=24)
     layout = ft.Column(
         expand=True,
         spacing=0,
